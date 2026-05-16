@@ -13,9 +13,22 @@ const NurseDashboard: React.FC<NurseDashboardProps> = ({ onSessionComplete, onBa
   const [countdown, setCountdown] = useState<number | null>(null);
   const [reps, setReps] = useState(0);
   const [maxAngle, setMaxAngle] = useState(0);
-  const [isPoseAligned, setIsPoseAligned] = useState(true);
+  const [isPoseAligned] = useState(true);
   const [isCounterActive, setIsCounterActive] = useState(false);
   const [lastAngle, setLastAngle] = useState(0);
+
+  const speak = (text: string) => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+      return
+    }
+
+    window.speechSynthesis.cancel()
+    const utterance = new SpeechSynthesisUtterance(text)
+    utterance.lang = 'ar-MA'
+    utterance.rate = 0.95
+    utterance.pitch = 1
+    window.speechSynthesis.speak(utterance)
+  }
 
   // Mock pose detection
   useEffect(() => {
@@ -34,22 +47,41 @@ const NurseDashboard: React.FC<NurseDashboardProps> = ({ onSessionComplete, onBa
     }
   }, [isCounterActive, maxAngle]);
 
+  useEffect(() => {
+    if (countdown === null) {
+      return
+    }
+
+    const countdownSpeech: Record<number, string> = {
+      3: 'Tlata',
+      2: 'Jouj',
+      1: 'Wahed',
+      0: 'Bda',
+    }
+
+    const spokenWord = countdownSpeech[countdown]
+    if (spokenWord) {
+      speak(spokenWord)
+    }
+
+    if (countdown === 0) {
+      setCountdown(null)
+      setIsCounterActive(true)
+      return
+    }
+
+    const timer = window.setTimeout(() => {
+      setCountdown((currentCount) => (currentCount !== null ? currentCount - 1 : currentCount))
+    }, 1000)
+
+    return () => window.clearTimeout(timer)
+  }, [countdown])
+
   const startWorkout = () => {
     if (!isPoseAligned) return;
     setIsStarted(true);
-    let count = 3;
-    setCountdown(count);
-
-    const interval = setInterval(() => {
-      count -= 1;
-      if (count === 0) {
-        clearInterval(interval);
-        setCountdown(null);
-        setIsCounterActive(true);
-      } else {
-        setCountdown(count);
-      }
-    }, 1000);
+    setIsCounterActive(false);
+    setCountdown(3);
   };
 
   const stopWorkout = async () => {

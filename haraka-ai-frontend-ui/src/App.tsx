@@ -9,6 +9,35 @@ type ViewMode = 'selection' | 'nurse' | 'doctor'
 export default function App() {
   const [mode, setMode] = useState<ViewMode>('selection')
 
+  const speak = (text: string) => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+      return
+    }
+
+    window.speechSynthesis.cancel()
+    const utterance = new SpeechSynthesisUtterance(text)
+    utterance.lang = 'ar-MA'
+    utterance.rate = 0.95
+    utterance.pitch = 1
+    window.speechSynthesis.speak(utterance)
+  }
+
+  const openNurseSpace = () => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+      setMode('nurse')
+      return
+    }
+
+    window.speechSynthesis.cancel()
+    const utterance = new SpeechSynthesisUtterance('salam')
+    utterance.lang = 'ar-MA'
+    utterance.rate = 0.95
+    utterance.pitch = 1
+    utterance.onend = () => setMode('nurse')
+    utterance.onerror = () => setMode('nurse')
+    window.speechSynthesis.speak(utterance)
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 font-inter text-slate-900">
       <AnimatePresence mode="wait">
@@ -35,7 +64,7 @@ export default function App() {
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  onClick={() => setMode('nurse')}
+                  onClick={openNurseSpace}
                   className="relative overflow-hidden group text-left rounded-[2.5rem] bg-white border border-slate-200 p-8 md:p-12 shadow-sm hover:shadow-xl hover:border-blue-200 transition-all duration-300 h-[400px] flex flex-col justify-end"
                 >
                   {/* Decorative Blob */}
