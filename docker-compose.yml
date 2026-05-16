@@ -15,13 +15,12 @@ services:
 
   node-backend:
     build:
-      context: ./haraka-ai-frontend-ui
+      context: ./node_backend
       dockerfile: Dockerfile
-    command: npm run server
     ports:
       - "4000:4000"
     volumes:
-      - ./haraka-ai-frontend-ui:/app
+      - ./node_backend:/app
       - /app/node_modules
     environment:
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}

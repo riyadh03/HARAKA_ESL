@@ -19,4 +19,4 @@ EXPOSE 3000
 EXPOSE 4000
 
 # The CMD will be overridden by docker-compose for the different services
-CMD ["npm", "run", "dev:full"]
+CMD ["npm", "run", "dev"]
