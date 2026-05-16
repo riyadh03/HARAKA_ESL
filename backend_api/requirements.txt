@@ -14,9 +14,9 @@ pydantic-settings>=2.1.0
 # OpenAI API
 openai>=1.3.0
 
-# Computer Vision (Hardware Check) - Commented out for initial run
-# opencv-python-headless>=4.8.0
-# numpy>=1.24.0
+# Computer Vision (Hardware Check)
+opencv-python-headless>=4.8.0
+numpy>=1.24.0
 
 # Environment Variables
 python-dotenv>=1.0.0

@@ -110,18 +110,12 @@ async def check_camera_hardware(
     """
     try:
         hardware_service = HardwareCheckService()
-        
-        # TODO: Run camera diagnostics
-        # result = await hardware_service.check_camera(duration)
-        
-        return {
-            "status": "ok",  # Placeholder
-            "laplacian_variance": 0.0,  # Placeholder
-            "lighting": "adequate",  # Placeholder
-            "lens_condition": "clean",  # Placeholder
-            "recommendations": []  # Placeholder
-        }
-        
+
+        # Run camera diagnostics for the requested duration
+        result = await hardware_service.check_camera(duration=duration)
+
+        return result
+
     except Exception as e:
         raise HTTPException(
             status_code=500,
