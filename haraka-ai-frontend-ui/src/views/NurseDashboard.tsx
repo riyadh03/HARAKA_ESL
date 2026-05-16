@@ -9,26 +9,15 @@ interface NurseDashboardProps {
 
 const NurseDashboard: React.FC<NurseDashboardProps> = ({ onSessionComplete, onBack }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const countdownAudioRef = useRef<HTMLAudioElement | null>(null);
   const [isStarted, setIsStarted] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(null);
+  const [isCountdownAudioPlaying, setIsCountdownAudioPlaying] = useState(false);
   const [reps, setReps] = useState(0);
   const [maxAngle, setMaxAngle] = useState(0);
   const [isPoseAligned] = useState(true);
   const [isCounterActive, setIsCounterActive] = useState(false);
   const [lastAngle, setLastAngle] = useState(0);
-
-  const speak = (text: string) => {
-    if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
-      return
-    }
-
-    window.speechSynthesis.cancel()
-    const utterance = new SpeechSynthesisUtterance(text)
-    utterance.lang = 'ar-MA'
-    utterance.rate = 0.95
-    utterance.pitch = 1
-    window.speechSynthesis.speak(utterance)
-  }
 
   // Mock pose detection
   useEffect(() => {
@@ -47,42 +36,52 @@ const NurseDashboard: React.FC<NurseDashboardProps> = ({ onSessionComplete, onBa
     }
   }, [isCounterActive, maxAngle]);
 
-  useEffect(() => {
-    if (countdown === null) {
-      return
-    }
+  const startWorkout = () => {
+    if (!isPoseAligned) return;
+    setIsStarted(true);
+    setIsCounterActive(false);
 
-    const countdownSpeech: Record<number, string> = {
-      3: 'Tlata',
-      2: 'Jouj',
-      1: 'Wahed',
-      0: 'Bda',
-    }
-
-    const spokenWord = countdownSpeech[countdown]
-    if (spokenWord) {
-      speak(spokenWord)
-    }
-
-    if (countdown === 0) {
+    if (typeof window === 'undefined') {
       setCountdown(null)
       setIsCounterActive(true)
       return
     }
 
-    const timer = window.setTimeout(() => {
-      setCountdown((currentCount) => (currentCount !== null ? currentCount - 1 : currentCount))
-    }, 1000)
-
-    return () => window.clearTimeout(timer)
-  }, [countdown])
-
-  const startWorkout = () => {
-    if (!isPoseAligned) return;
-    setIsStarted(true);
-    setIsCounterActive(false);
     setCountdown(3);
+    const audio = new Audio('/audio/tlatajoujwahed.mp3')
+    countdownAudioRef.current = audio
+    setIsCountdownAudioPlaying(true)
+    audio.onended = () => {
+      setIsCountdownAudioPlaying(false)
+      countdownAudioRef.current = null
+      setCountdown(null)
+      setIsCounterActive(true)
+    }
+    audio.onerror = () => {
+      setIsCountdownAudioPlaying(false)
+      countdownAudioRef.current = null
+      setCountdown(null)
+      setIsCounterActive(true)
+    }
+    void audio.play().catch(() => {
+      setIsCountdownAudioPlaying(false)
+      countdownAudioRef.current = null
+      setCountdown(null)
+      setIsCounterActive(true)
+    })
   };
+
+  const stopCountdownAudio = () => {
+    countdownAudioRef.current?.pause()
+    if (countdownAudioRef.current) {
+      countdownAudioRef.current.currentTime = 0
+    }
+    countdownAudioRef.current = null
+    setIsCountdownAudioPlaying(false)
+    setCountdown(null)
+    setIsCounterActive(false)
+    setIsStarted(false)
+  }
 
   const stopWorkout = async () => {
     setIsCounterActive(false);
@@ -174,6 +173,14 @@ const NurseDashboard: React.FC<NurseDashboardProps> = ({ onSessionComplete, onBa
                   <p className="text-2xl font-bold text-white mt-4 tracking-widest uppercase font-outfit drop-shadow-lg">
                     {getCountdownText(countdown)}
                   </p>
+                  {isCountdownAudioPlaying && (
+                    <button
+                      onClick={stopCountdownAudio}
+                      className="mt-6 px-5 py-2 rounded-full bg-white/15 text-white font-bold hover:bg-white/25 transition-colors"
+                    >
+                      Stop Audio
+                    </button>
+                  )}
                 </div>
               </motion.div>
             )}
