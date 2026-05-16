@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  fastapi-backend:
+    build:
+      context: ./backend_api
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend_api:/app
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    restart: unless-stopped
+
+  node-backend:
+    build:
+      context: ./haraka-ai-frontend-ui
+      dockerfile: Dockerfile
+    command: npm run server
+    ports:
+      - "4000:4000"
+    volumes:
+      - ./haraka-ai-frontend-ui:/app
+      - /app/node_modules
+    environment:
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - PORT=4000
+    restart: unless-stopped
+
+  frontend-ui:
+    build:
+      context: ./haraka-ai-frontend-ui
+      dockerfile: Dockerfile
+    command: npm run dev -- --host 0.0.0.0
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./haraka-ai-frontend-ui:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    restart: unless-stopped

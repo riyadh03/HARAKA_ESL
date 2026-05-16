@@ -33,28 +33,28 @@ Privacy-first design: the system follows a strict Zero-Recording policy — no v
 ```
 haraka_ai_project/
 │
-├── frontend_react/                # ⚛️ React app (Nurse + Clinician)
+├── haraka-ai-frontend-ui/         # ⚛️ React app (Nurse + Clinician) + Express Server
 │   ├── public/
-│   │   └── audio/                 # Offline audio files (321_bda.mp3, zid_chwiya.mp3...)
+│   │   └── audio/                 # Offline audio files
 │   ├── src/
 │   │   ├── components/
 │   │   │   ├── CameraTracker.jsx  # MediaPipe Pose + Canvas (privacy blur)
 │   │   │   ├── EmojiPainScale.jsx # 5-face pain scale UI
-│   │   │   └── TriageInbox.jsx    # Clinician dashboard (Amber Flags)
+│   │   │   └── TriageInbox.jsx    # Clinician dashboard
 │   │   ├── hooks/
-│   │   │   └── useCalibration.js  # Patient-relative baseline calibration (30s)
+│   │   │   └── useCalibration.js  # Patient-relative baseline calibration
 │   │   └── App.js
-│   ├── package.json
-│   └── tailwind.config.js
+│   ├── server.ts                  # Express Backend for LLM Bridge
+│   ├── Dockerfile
+│   └── package.json
 │
-├── backend_api/                   # 🐍 Python FastAPI server (Cloud / Local Edge)
-│   ├── main.py                    # API endpoints (receive JSON, return report)
-│   ├── hardware_check.py          # OpenCV Laplacian variance camera test
-│   ├── llm_service.py             # Prompt engineering and Amber Flag validation
-│   ├── whisper_service.py         # Whisper integration for pain transcript
+├── backend_api/                   # 🐍 Python FastAPI server
+│   ├── main.py                    # API endpoints
 │   ├── requirements.txt
-│   └── .env                       # API keys (LLM, Whisper) - DO NOT COMMIT
+│   ├── Dockerfile
+│   └── .env                       # API keys - DO NOT COMMIT
 │
+├── docker-compose.yml             # Orchestrates Frontend, Node API, and Python API
 └── README.md
 ```
 
@@ -75,29 +75,26 @@ haraka_ai_project/
 
 ## Quick Start — Local Development
 
+The project is fully Dockerized for an easy, consistent development environment.
+
 ### Prerequisites
-- Node.js (v16+) & npm
-- Python 3.9+
-- OpenAI / Google Cloud API keys (stored in `backend_api/.env` — do not commit)
+- Docker and Docker Compose installed and running on your machine.
+- Set up your `.env` variables (e.g. `OPENAI_API_KEY`, `GOOGLE_API_KEY`) locally.
 
-### Run Backend (FastAPI)
+### Run with Docker
+
+Simply run the following command in the root directory:
+
 ```bash
-cd backend_api
-python -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-uvicorn main:app --reload --port 8000
+docker compose up --build
 ```
 
-### Run Frontend (React)
-```bash
-cd frontend_react
-npm install
-npm install @mediapipe/pose @mediapipe/camera_utils
-npm start
-```
+The services will be exposed at the following local ports:
+- **Frontend UI (React/Vite):** `http://localhost:3000`
+- **Express Backend (Node.js):** `http://localhost:4000/api/health`
+- **FastAPI Backend (Python):** `http://localhost:8000`
 
-The nurse-facing camera portal will be available at `http://localhost:3000`.
+> **Note:** Hot-reloading is enabled via Docker volume mounts. Changes to your local source code will immediately reflect in the running containers without needing to rebuild.
 
 ---
 

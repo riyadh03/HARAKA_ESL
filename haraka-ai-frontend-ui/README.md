@@ -39,19 +39,15 @@ Haraka.ai
 
 ### Installation
 
+Le projet global est maintenant entièrement Dockerisé. Nous recommandons d'utiliser `docker-compose` depuis le dossier racine du projet (`HARAKA_ESL`) pour lancer simultanément ce frontend, le serveur Express, et le backend Python.
+
 ```bash
-# Cloner et installer les dépendances
-pnpm install
-
-# Créer .env (optionnel pour backend Gemini)
+# Créer .env depuis l'exemple (optionnel pour backend Gemini)
 cp .env.example .env
-# Editer .env et ajouter GOOGLE_API_KEY si désiré
+# Editer .env et ajouter GOOGLE_API_KEY
 
-# Démarrer l'app frontend seulement
-pnpm run dev
-
-# Démarrer frontend + backend (si Gemini API disponible)
-pnpm run dev:full
+# Depuis la racine du projet HARAKA_ESL :
+docker compose up --build
 ```
 
 L'app sera disponible à `http://localhost:3000`
@@ -185,21 +181,21 @@ vercel deploy
 ```
 
 ### Docker
+Le `docker-compose.yml` à la racine est la méthode recommandée pour orchestrer les conteneurs. Si vous devez build uniquement cette image :
 ```bash
-docker build -t haraka-ai .
-docker run -p 3000:3000 haraka-ai
+docker build -t haraka-ai-frontend .
 ```
 
 ## ✅ Vérification Locale
 
+Avec le setup Docker Compose à la racine, vous pouvez vérifier :
+
 ```bash
-# Terminal 1: Frontend
-pnpm run dev
+# Accéder au Frontend UI
+http://localhost:3000
 
-# Terminal 2: Backend (si API key disponible)
-pnpm run server
-
-# Accéder à http://localhost:3000
+# Accéder à l'API Express Healthcheck
+http://localhost:4000/api/health
 ```
 
 **Sur mobile**: Utilisez Chrome DevTools (F12 → Toggle device toolbar) pour voir le design mobile.
