@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Download, Edit2 } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Download, Edit2, ShieldCheck, Database } from 'lucide-react'
 import { motion } from 'framer-motion'
 
 interface Patient {
@@ -12,8 +12,6 @@ interface Patient {
 
 interface PatientReportProps {
   patient: Patient
-  selectedTab: 'json' | 'reasoning' | 'report'
-  onTabChange: (tab: 'json' | 'reasoning' | 'report') => void
 }
 
 const MOCK_JSON = {
@@ -25,134 +23,142 @@ const MOCK_JSON = {
   completed_reps: 8,
   joint_angles: [45, 47, 46, 48, 50, 49, 51, 52],
   pain_score: 4,
-  form_quality: 0.78,
-  notes: 'Slight deviation in form detected at reps 5-7',
+  warnings: ['Mobilité réduite détectée']
 }
 
-const MOCK_REASONING = `The AI model analyzed the patient's movement data and identified several factors contributing to the current assessment:
+const MOCK_REPORT = `**Rapport Clinique: Aammi Lahcen**
 
-1. **Pain Levels**: The patient reported a pain score of 4/5, indicating moderate to severe pain during the exercise session.
-2. **Form Quality**: 78% form adherence suggests the patient is struggling with proper alignment, particularly in the later repetitions.
-3. **Joint Stability**: Minor instability detected in knee extension, which correlates with increased pain reports.
-4. **Recovery Status**: Based on historical data, this represents a 15% decrease in performance compared to last session.
+La session de rééducation effectuée indique une progression modérée avec quelques points d'attention. Le patient a complété 8 répétitions sur les 15 prescrites pour l'exercice de flexion du genou. 
 
-**Recommendation**: Continue current protocol with form correction focus. Consider reducing intensity by 20% if pain persists.`
+Le score de douleur rapporté est de 4/5. **L'analyse IA a détecté une instabilité potentielle de l'articulation lors des dernières répétitions, non mesurée directement par les capteurs d'angle.** Une validation spécialiste est requise.
 
-const MOCK_REPORT = `**Patient: Aammi Lahcen | Session: SES-2024-0518-001**
+Globalement, la trajectoire de récupération est positive. Un maintien de l'intensité actuelle avec correction posturale est suggéré.`
 
-The rehabilitation session conducted on May 18, 2024, shows moderate progress with some concerns requiring attention. The patient completed 8 of 15 repetitions of knee flexion exercises with a form quality score of 78%, indicating room for improvement in biomechanical alignment.
+export default function PatientReport({ patient }: PatientReportProps) {
+  const [protocol, setProtocol] = useState('Continuer le protocole actuel')
+  const [isLoading, setIsLoading] = useState(true)
 
-The patient reported pain levels of 4/5 during the session, which aligns with observed form degradation in later repetitions. **An AI-generated insight flagged potential joint instability that was not directly measured by sensors, requiring specialist validation.** This represents a potential case where the AI model extrapolated beyond the raw data, and manual assessment is recommended.
-
-Overall recovery trajectory remains positive with expected completion of full protocol within 2-3 sessions if current intensity is maintained and form corrections are implemented.`
-
-export default function PatientReport({
-  patient,
-  selectedTab,
-  onTabChange,
-}: PatientReportProps) {
-  const [protocol, setProtocol] = useState('Continue current protocol')
+  // Simulate AI Loading
+  useEffect(() => {
+    setIsLoading(true)
+    const timer = setTimeout(() => setIsLoading(false), 1500)
+    return () => clearTimeout(timer)
+  }, [patient])
 
   return (
-    <div className="p-8">
+    <div className="h-full flex flex-col">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="font-outfit text-4xl font-bold text-slate-900 mb-2">{patient.name}</h1>
-        <p className="text-slate-600">Session ID: SES-2024-0518-001 · Last Updated: 2024-05-18 14:32</p>
+      <div className="mb-6 flex items-start justify-between">
+        <div>
+          <h1 className="font-outfit text-4xl font-bold text-slate-900 mb-2">{patient.name}</h1>
+          <p className="text-slate-500 font-medium flex items-center gap-2">
+            <span>ID: SES-2024-0518-001</span>
+            <span>•</span>
+            <span>Transmission Edge-AI validée</span>
+          </p>
+        </div>
+        <div className="bg-white border border-slate-200 px-4 py-2 rounded-full shadow-sm flex items-center gap-2 text-slate-700 font-bold">
+          <ShieldCheck size={18} className="text-emerald-600" />
+          CNDP Compliant
+        </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-2 mb-8 border-b border-slate-200">
-        {[
-          { id: 'json', label: 'Session JSON' },
-          { id: 'reasoning', label: 'LLM Reasoning' },
-          { id: 'report', label: 'Specialist Report' },
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => onTabChange(tab.id as any)}
-            className={`px-4 py-3 font-medium border-b-2 transition-colors ${
-              selectedTab === tab.id
-                ? 'border-emerald-600 text-emerald-600'
-                : 'border-transparent text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Content */}
-      <motion.div
-        key={selectedTab}
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.2 }}
-      >
-        {selectedTab === 'json' && (
-          <div className="bg-slate-900 text-slate-50 p-6 rounded-lg font-mono text-sm overflow-x-auto">
-            <pre>{JSON.stringify(MOCK_JSON, null, 2)}</pre>
+      {/* 2-Column Grid */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 flex-1">
+        
+        {/* Left Column: Tiny JSON Terminal */}
+        <div className="bg-slate-900 rounded-[2.5rem] p-6 lg:p-8 flex flex-col shadow-xl border border-slate-800">
+          <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-800">
+            <div className="p-2 bg-slate-800 rounded-xl text-emerald-400">
+              <Database size={24} />
+            </div>
+            <div>
+              <h2 className="font-outfit font-bold text-white text-xl">Raw Edge Data</h2>
+              <p className="text-slate-400 text-sm">Payload 5KB • Latence 120ms</p>
+            </div>
           </div>
-        )}
-
-        {selectedTab === 'reasoning' && (
-          <div className="bg-white p-6 rounded-lg border border-slate-200 text-slate-900 whitespace-pre-wrap leading-relaxed">
-            {MOCK_REASONING}
+          
+          <div className="flex-1 bg-black/50 rounded-2xl p-4 overflow-auto border border-white/5">
+            <pre className="text-emerald-400 font-mono text-xs sm:text-sm leading-relaxed">
+              {JSON.stringify({ ...MOCK_JSON, patient_name: patient.name }, null, 2)}
+            </pre>
           </div>
-        )}
+        </div>
 
-        {selectedTab === 'report' && (
-          <div className="bg-white rounded-lg border border-slate-200 p-6">
-            <div className="text-slate-900 leading-relaxed mb-6">
-              {MOCK_REPORT.split('\n').map((line, idx) => {
-                const isHighlighted = line.includes('AI-generated insight')
-                return (
-                  <p
-                    key={idx}
-                    className={`mb-2 ${
-                      isHighlighted ? 'bg-amber-400 text-slate-900 px-3 py-1 rounded-md font-medium' : ''
-                    }`}
-                  >
-                    {line}
-                  </p>
-                )
-              })}
+        {/* Right Column: AI Insight */}
+        <div className="bg-white rounded-[2.5rem] p-6 lg:p-8 border border-slate-200 shadow-xl flex flex-col">
+          <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-emerald-500 flex items-center justify-center text-white font-bold font-outfit text-xl">
+              AI
+            </div>
+            <div>
+              <h2 className="font-outfit font-bold text-slate-900 text-xl">Gemini Insight</h2>
+              <p className="text-slate-500 text-sm">Génération basée sur le JSON brut</p>
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-y-auto pr-2">
+            {isLoading ? (
+              <div className="space-y-4">
+                <div className="h-4 bg-slate-200 rounded animate-pulse w-3/4"></div>
+                <div className="h-4 bg-slate-200 rounded animate-pulse w-full"></div>
+                <div className="h-4 bg-slate-200 rounded animate-pulse w-5/6"></div>
+                <div className="h-4 bg-slate-200 rounded animate-pulse w-full mt-8"></div>
+                <div className="h-4 bg-slate-200 rounded animate-pulse w-4/5"></div>
+              </div>
+            ) : (
+              <div className="prose prose-slate max-w-none text-slate-700 italic font-serif leading-loose text-lg">
+                {MOCK_REPORT.split('\n').map((line, idx) => {
+                  const isHighlighted = line.includes('L\'analyse IA a détecté')
+                  return (
+                    <p
+                      key={idx}
+                      className={`mb-4 ${
+                        isHighlighted ? 'bg-amber-100 text-amber-900 not-italic px-4 py-2 rounded-xl font-medium border border-amber-200 shadow-sm' : ''
+                      }`}
+                    >
+                      {line}
+                    </p>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Actions */}
+          <div className="mt-6 pt-6 border-t border-slate-100 space-y-4">
+            <div>
+              <label className="block text-sm font-bold text-slate-700 mb-2 uppercase tracking-wider">
+                <Edit2 size={16} className="inline mr-2" />
+                Ajustement du Protocole
+              </label>
+              <textarea
+                value={protocol}
+                onChange={(e) => setProtocol(e.target.value)}
+                className="w-full px-4 py-3 border-2 border-slate-200 rounded-2xl focus:outline-none focus:border-emerald-500 resize-none h-20 transition-colors text-slate-800 font-medium"
+              />
             </div>
 
-            {/* Actions */}
-            <div className="space-y-4 border-t border-slate-200 pt-6 mt-6">
+            <div className="grid grid-cols-2 gap-4">
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                className="w-full flex items-center justify-center gap-2 bg-slate-100 text-slate-900 py-3 rounded-lg font-medium hover:bg-slate-200 transition-all shadow-sm hover:shadow-md"
+                className="w-full flex items-center justify-center gap-2 bg-slate-100 text-slate-700 py-4 rounded-2xl font-bold hover:bg-slate-200 transition-colors"
               >
                 <Download size={18} />
-                Download PDF
+                Exporter
               </motion.button>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  <Edit2 size={16} className="inline mr-2" />
-                  Modify Protocol
-                </label>
-                <textarea
-                  value={protocol}
-                  onChange={(e) => setProtocol(e.target.value)}
-                  className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 resize-none h-24 transition-all"
-                />
-              </div>
-
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                className="w-full bg-emerald-600 text-white py-3 rounded-lg font-medium hover:bg-emerald-700 transition-all shadow-md hover:shadow-lg"
+                className="w-full bg-emerald-600 text-white py-4 rounded-2xl font-bold hover:bg-emerald-700 transition-colors shadow-lg shadow-emerald-600/20"
               >
-                Save Changes
+                Valider
               </motion.button>
             </div>
           </div>
-        )}
-      </motion.div>
+        </div>
+      </div>
     </div>
   )
 }
