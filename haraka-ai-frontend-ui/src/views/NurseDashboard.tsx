@@ -1,12 +1,13 @@
 import React, { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Camera as CameraIcon, CheckCircle2, AlertCircle, Play, RefreshCw, Send } from "lucide-react";
+import { Camera as CameraIcon, CheckCircle2, AlertCircle, Play, RefreshCw, Send, ArrowLeft } from "lucide-react";
 
 interface NurseDashboardProps {
   onSessionComplete: (data: any) => void;
+  onBack?: () => void;
 }
 
-const NurseDashboard: React.FC<NurseDashboardProps> = ({ onSessionComplete }) => {
+const NurseDashboard: React.FC<NurseDashboardProps> = ({ onSessionComplete, onBack }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isStarted, setIsStarted] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(null);
@@ -91,47 +92,54 @@ const NurseDashboard: React.FC<NurseDashboardProps> = ({ onSessionComplete }) =>
   };
 
   return (
-    <div className="flex flex-col h-screen bg-slate-50 overflow-hidden">
-      {/* Compact Header */}
-      <header className="bg-white border-b border-slate-200 px-4 py-3 flex-shrink-0">
-        <div className="flex items-center justify-between gap-3 max-w-full">
-          <div className="flex-1 min-w-0">
-            <h1 className="text-lg font-bold text-slate-800 truncate">Haraka.ai</h1>
-            <p className="text-xs text-slate-500">Patient: AL-1956</p>
+    <div className="min-h-screen bg-slate-50 p-4 md:p-6 lg:p-8 flex flex-col font-inter">
+      {/* Header */}
+      <header className="flex items-center justify-between mb-8">
+        <div className="flex items-center gap-4">
+          {onBack && (
+            <button onClick={onBack} className="p-2 hover:bg-slate-200 rounded-full transition-colors">
+              <ArrowLeft size={24} className="text-slate-600" />
+            </button>
+          )}
+          <div>
+            <h1 className="font-outfit text-2xl md:text-3xl font-bold text-slate-900">Patient: AL-1956</h1>
+            <p className="text-slate-500 font-medium">Session de rééducation assistée par Edge-AI</p>
           </div>
-          <div className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-semibold flex-shrink-0 whitespace-nowrap ${
-            isPoseAligned ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
-          }`}>
-            {isPoseAligned ? <CheckCircle2 size={14} /> : <AlertCircle size={14} />}
-            <span className="hidden sm:inline">{isPoseAligned ? 'Prêt' : 'Position'}</span>
-          </div>
+        </div>
+        
+        {/* Alignment Pill */}
+        <div className={`px-4 py-2 rounded-full flex items-center gap-2 text-sm font-bold shadow-sm transition-colors duration-300 ${
+          isPoseAligned ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+        }`}>
+          {isPoseAligned ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
+          <span>{isPoseAligned ? 'Sujet Aligné' : 'Recherche du Sujet...'}</span>
         </div>
       </header>
 
-      {/* Main Content - Scrollable */}
-      <div className="flex-1 overflow-y-auto flex flex-col pb-4">
-        {/* Video Feed Section - Priority */}
-        <div className="relative bg-black w-full flex-shrink-0 border-b-4 border-white aspect-square">
-          <canvas ref={canvasRef} className="w-full h-full object-cover" width={640} height={480} />
+      {/* Main Content: 3-column split on large screens */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 flex-1">
+        
+        {/* The Edge-AI Camera Feed (Spans 2 columns) */}
+        <div className="lg:col-span-2 relative bg-slate-900 rounded-[2.5rem] overflow-hidden shadow-xl border-4 border-white flex flex-col items-center justify-center min-h-[500px]">
+          {/* Mock Canvas */}
+          <canvas ref={canvasRef} className="absolute inset-0 w-full h-full object-cover opacity-80" />
           
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-900 to-black flex items-center justify-center">
-            <div className="text-center pointer-events-none">
-              <CameraIcon className="text-white/20 mb-4 mx-auto" size={64} />
-              <p className="text-white/30 text-sm">Flux vidéo</p>
-            </div>
+          <div className="z-0 flex flex-col items-center justify-center text-slate-700 pointer-events-none">
+            <CameraIcon size={64} className="mb-4 opacity-30" />
+            <p className="font-outfit font-semibold opacity-50">Flux Vidéo Sécurisé (Local)</p>
           </div>
-          
+
           <AnimatePresence>
             {countdown !== null && (
               <motion.div 
-                initial={{ scale: 0.5, opacity: 0 }}
+                initial={{ scale: 0.8, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 2, opacity: 0 }}
-                className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm z-10"
+                exit={{ scale: 1.5, opacity: 0 }}
+                className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm z-10"
               >
                 <div className="text-center">
-                  <span className="text-7xl sm:text-8xl font-black text-white drop-shadow-lg">{countdown}</span>
-                  <p className="text-lg sm:text-xl font-bold text-white mt-2 uppercase tracking-wider">
+                  <span className="font-outfit text-8xl md:text-9xl font-black text-white drop-shadow-2xl">{countdown}</span>
+                  <p className="text-2xl font-bold text-white mt-4 tracking-widest uppercase font-outfit drop-shadow-lg">
                     {getCountdownText(countdown)}
                   </p>
                 </div>
@@ -140,81 +148,81 @@ const NurseDashboard: React.FC<NurseDashboardProps> = ({ onSessionComplete }) =>
           </AnimatePresence>
 
           {!isStarted && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-md z-20 p-4">
-              <div className="text-center">
-                <div className="bg-emerald-500 w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-emerald-500/50">
-                  <CameraIcon className="text-white" size={28} />
+            <div className="absolute inset-0 flex items-center justify-center bg-slate-900/60 backdrop-blur-md z-20">
+              <div className="text-center bg-white/10 p-8 rounded-[2rem] border border-white/20 shadow-2xl backdrop-blur-lg">
+                <div className="bg-emerald-500 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg shadow-emerald-500/30">
+                  <CameraIcon className="text-white" size={32} />
                 </div>
-                <h2 className="text-base sm:text-lg font-bold text-white mb-2">Positionner le Patient</h2>
-                <p className="text-slate-300 text-xs sm:text-sm mb-4">2 mètres de la tablette</p>
+                <h2 className="font-outfit text-2xl font-bold text-white mb-2">Positionner le Patient</h2>
+                <p className="text-slate-300 mb-8 font-medium">Placez la tablette à 2 mètres environ.</p>
                 <button
                   onClick={startWorkout}
                   disabled={!isPoseAligned}
-                  className={`px-6 sm:px-8 py-3 rounded-lg sm:rounded-xl font-bold text-sm sm:text-base flex items-center justify-center gap-2 mx-auto transition-all ${
-                    isPoseAligned ? 'bg-white text-emerald-600 shadow-xl hover:shadow-2xl active:scale-95' : 'bg-slate-700 text-slate-400 cursor-not-allowed'
+                  className={`px-8 py-4 rounded-full font-bold text-lg flex items-center justify-center gap-3 mx-auto transition-all ${
+                    isPoseAligned ? 'bg-white text-emerald-600 shadow-xl hover:scale-105 active:scale-95' : 'bg-slate-700 text-slate-400 cursor-not-allowed opacity-50'
                   }`}
                 >
-                  <Play fill="currentColor" size={16} />
-                  Démarrer
+                  <Play fill="currentColor" size={20} />
+                  Démarrer la Session
                 </button>
               </div>
             </div>
           )}
         </div>
 
-        {/* Metrics Section - Stacked on Mobile */}
-        <div className="px-3 py-3 sm:px-4 sm:py-4 space-y-2 sm:space-y-3 flex-1">
-          {/* Big Reps Counter */}
-          <motion.div className="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-slate-200 shadow-sm">
-            <div className="text-center">
-              <span className="block text-5xl sm:text-6xl font-black text-emerald-600 tabular-nums">{reps}</span>
-              <span className="text-xs sm:text-sm text-slate-500 font-bold uppercase tracking-wider">Répétitions</span>
-            </div>
-          </motion.div>
+        {/* The Stats Column (Spans 1 column) */}
+        <div className="lg:col-span-1 flex flex-col gap-6">
+          {/* Reps Box */}
+          <div className="bg-white rounded-[2.5rem] p-8 border border-slate-200 shadow-sm flex flex-col items-center justify-center flex-1">
+            <span className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4">Répétitions</span>
+            <motion.span 
+              key={reps}
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="font-outfit font-black text-8xl text-emerald-600 tabular-nums leading-none"
+            >
+              {reps}
+            </motion.span>
+          </div>
 
-          {/* Angle Metrics - 2 Column */}
-          <div className="grid grid-cols-2 gap-2 sm:gap-3">
-            <div className="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-slate-200 shadow-sm text-center">
-              <span className="block text-2xl sm:text-3xl font-black text-slate-800 tabular-nums">{maxAngle}°</span>
-              <span className="text-xs text-slate-500 font-bold uppercase">Max</span>
+          {/* Angles Box */}
+          <div className="bg-white rounded-[2.5rem] p-8 border border-slate-200 shadow-sm grid grid-cols-2 gap-4">
+            <div className="text-center">
+              <span className="text-sm font-bold text-slate-400 uppercase tracking-widest block mb-2">Max</span>
+              <span className="font-outfit font-bold text-4xl text-slate-800 tabular-nums">{maxAngle}°</span>
             </div>
-            <div className="bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-slate-200 shadow-sm text-center">
-              <span className="block text-2xl sm:text-3xl font-black text-slate-800 tabular-nums">{Math.round(lastAngle)}°</span>
-              <span className="text-xs text-slate-500 font-bold uppercase">Actuel</span>
+            <div className="text-center border-l border-slate-100">
+              <span className="text-sm font-bold text-slate-400 uppercase tracking-widest block mb-2">Actuel</span>
+              <span className="font-outfit font-bold text-4xl text-slate-800 tabular-nums">{Math.round(lastAngle)}°</span>
             </div>
           </div>
 
-          {/* Alert Box */}
-          <div className="bg-blue-50 border-l-4 border-blue-500 p-3 sm:p-4 rounded">
-            <p className="text-xs sm:text-sm font-medium text-blue-900">
-              ✓ Bras entièrement visibles
-            </p>
+          {/* Controls */}
+          <div className="bg-white rounded-[2.5rem] p-6 border border-slate-200 shadow-sm flex flex-col gap-4">
+            {isCounterActive ? (
+              <>
+                <button
+                  onClick={stopWorkout}
+                  className="w-full bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold py-4 rounded-2xl shadow-lg shadow-emerald-600/20 transition-all flex items-center justify-center gap-2"
+                >
+                  <Send size={20} />
+                  Terminer
+                </button>
+                <button 
+                  onClick={() => window.location.reload()}
+                  className="w-full py-3 text-slate-500 font-bold flex items-center justify-center gap-2 hover:bg-slate-100 hover:text-slate-700 rounded-2xl transition-colors"
+                >
+                  <RefreshCw size={18} />
+                  Réinitialiser
+                </button>
+              </>
+            ) : (
+              <div className="flex items-center justify-center h-[104px] text-slate-400 font-medium">
+                En attente du démarrage...
+              </div>
+            )}
           </div>
         </div>
-      </div>
-
-      {/* Bottom Controls - Fixed */}
-      <div className="bg-white border-t border-slate-200 px-3 sm:px-4 py-2 sm:py-3 gap-2 sm:gap-3 flex flex-col flex-shrink-0">
-        {isCounterActive ? (
-          <>
-            <button
-              onClick={stopWorkout}
-              className="w-full bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold py-3 sm:py-4 rounded-lg sm:rounded-xl shadow-lg transition-all flex items-center justify-center gap-2"
-            >
-              <Send size={18} />
-              <span className="text-sm sm:text-base">Terminer</span>
-            </button>
-            <button 
-              onClick={() => window.location.reload()}
-              className="w-full py-2.5 sm:py-3 text-slate-600 font-semibold flex items-center justify-center gap-2 hover:bg-slate-100 rounded-lg transition-colors"
-            >
-              <RefreshCw size={16} />
-              <span className="text-xs sm:text-sm">Réinitialiser</span>
-            </button>
-          </>
-        ) : (
-          <p className="text-center text-slate-500 text-xs sm:text-sm py-2">En attente...</p>
-        )}
       </div>
     </div>
   );
