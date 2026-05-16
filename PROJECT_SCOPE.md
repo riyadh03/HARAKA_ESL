@@ -75,6 +75,7 @@ Define a clear feature scope for Haraka.ai and assign ownership to the team memb
   - Build a regex-based verifier that checks each generated sentence for JSON citations.
   - Flag unsupported or invented sentences as Amber Flags in orange.
 
+ The pdf report to do also include the amber flags.
 ---
 
 ## PRODUCT & BUSINESS
