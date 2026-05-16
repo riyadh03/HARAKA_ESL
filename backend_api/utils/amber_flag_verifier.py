@@ -41,7 +41,7 @@ class AmberFlagVerifier:
         self,
         report_text: str,
         session_data: Dict[str, Any]
-    ) -> Tuple[List[AmberFlag], bool]:
+    ) -> Tuple[List[AmberFlag], bool, str]:
         """
         Verify that all statements in the report are grounded in JSON data.
         
@@ -56,44 +56,51 @@ class AmberFlagVerifier:
             session_data: Original session JSON data
         
         Returns:
-            tuple: (list of amber flags, overall verification status)
+            tuple: (list of amber flags, overall verification status, flagged report text)
         """
         amber_flags = []
+        flagged_report_text = report_text
         
         # Split report into sentences
         sentences = self._split_into_sentences(report_text)
         
         for sentence in sentences:
-            # Check if sentence is factual (contains measurements or claims)
-            if self._is_factual_statement(sentence):
-                # Extract citations from sentence
-                citations = self._extract_citations(sentence)
-                
-                if not citations:
-                    # No citations for factual statement - flag it
-                    flag = AmberFlag(
-                        sentence=sentence.strip(),
-                        location="unknown",  # TODO: Determine section
-                        reason="Factual statement without JSON citation",
-                        suggested_citation=None
-                    )
-                    amber_flags.append(flag)
-                else:
-                    # Validate citations exist in session data
-                    for citation in citations:
-                        if not self._citation_exists_in_data(citation, session_data):
-                            flag = AmberFlag(
-                                sentence=sentence.strip(),
-                                location="unknown",  # TODO: Determine section
-                                reason=f"Citation [{citation}] not found in session data",
-                                suggested_citation=self._suggest_citation(sentence, session_data)
-                            )
-                            amber_flags.append(flag)
+            citations = self._extract_citations(sentence)
+            is_factual = self._is_factual_statement(sentence)
+            is_amber = False
+            
+            if is_factual and not citations:
+                # No citations for factual statement - flag it
+                flag = AmberFlag(
+                    sentence=sentence.strip(),
+                    location="unknown",  # TODO: Determine section
+                    reason="Factual statement without JSON citation",
+                    suggested_citation=None
+                )
+                amber_flags.append(flag)
+                is_amber = True
+            elif citations:
+                # Validate citations exist in session data
+                for citation in citations:
+                    if not self._citation_exists_in_data(citation, session_data):
+                        flag = AmberFlag(
+                            sentence=sentence.strip(),
+                            location="unknown",  # TODO: Determine section
+                            reason=f"Citation [{citation}] not found in session data",
+                            suggested_citation=self._suggest_citation(sentence, session_data)
+                        )
+                        amber_flags.append(flag)
+                        is_amber = True
+            
+            if is_amber:
+                # Wrap the unsupported sentence in orange
+                replacement = f'<span style="color: orange;" class="amber-flag">{sentence}</span>'
+                flagged_report_text = flagged_report_text.replace(sentence, replacement)
         
         # Determine overall verification status
         is_verified = len(amber_flags) == 0
         
-        return amber_flags, is_verified
+        return amber_flags, is_verified, flagged_report_text
     
     def _split_into_sentences(self, text: str) -> List[str]:
         """
@@ -105,8 +112,8 @@ class AmberFlagVerifier:
         Returns:
             list: Sentences
         """
-        # Simple sentence splitting on periods, question marks, exclamation marks
-        sentences = re.split(r'[.!?]+', text)
+        # Split on whitespace that follows a sentence-ending punctuation mark
+        sentences = re.split(r'(?<=[.!?])\s+', text)
         return [s.strip() for s in sentences if s.strip()]
     
     def _is_factual_statement(self, sentence: str) -> bool:

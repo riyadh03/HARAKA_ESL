@@ -70,8 +70,8 @@ class SessionSubmitRequest(BaseModel):
 
 @router.post("/submit")
 async def submit_session(
-    request: SessionSubmitRequest,
-    llm_service: LLMService = Depends(lambda: Request.app.state.llm_service)
+    request_data: SessionSubmitRequest,
+    request: Request
 ) -> Dict[str, Any]:
     """
     Submit session data from frontend Edge AI.
@@ -94,11 +94,12 @@ async def submit_session(
         # For MVP: Save to JSON file
         
         # TODO: Trigger async LLM report generation
-        # report = await llm_service.generate_clinical_report(request.dict())
+        # llm_service = request.app.state.llm_service
+        # report = await llm_service.generate_clinical_report(request_data.dict())
         
         return {
             "status": "success",
-            "session_id": request.session_id,
+            "session_id": request_data.session_id,
             "message": "Session data received successfully",
             "report_status": "generating"
         }
@@ -141,7 +142,7 @@ async def get_session(session_id: str) -> Dict[str, Any]:
 @router.post("/{session_id}/report")
 async def generate_report(
     session_id: str,
-    llm_service: LLMService = Depends(lambda: Request.app.state.llm_service),
+    request: Request,
     verifier: AmberFlagVerifier = Depends()
 ) -> Dict[str, Any]:
     """
@@ -163,20 +164,30 @@ async def generate_report(
         dict: Clinical report with amber flags highlighted
     """
     try:
-        # TODO: Retrieve session data
-        session_data = {}
+        # Retrieve mock session data for MVP
+        session_data = {
+            "metadata": {"session_id": session_id},
+            "exercise_analytics": {"max_angle": 145, "reps": 10},
+            "pain_scale": 2
+        }
         
-        # TODO: Generate report with LLM
-        # report = await llm_service.generate_clinical_report(session_data)
+        # Generate report with LLM
+        llm_service = request.app.state.llm_service
+        report_data = await llm_service.generate_clinical_report(session_data)
+        raw_report = report_data.get("raw_report", "")
         
-        # TODO: Verify report with amber flag checker
-        # verified_report = verifier.verify_report(report, session_data)
+        # Verify report with amber flag checker
+        amber_flags, is_verified, flagged_report_text = verifier.verify_report(raw_report, session_data)
         
         return {
             "session_id": session_id,
-            "report": {},  # Placeholder for generated report
-            "amber_flags": [],  # List of unsupported sentences
-            "verification_status": "complete"
+            "report": {
+                "raw_report": raw_report,
+                "flagged_report_text": flagged_report_text,
+                "model_used": report_data.get("model_used", "unknown")
+            },
+            "amber_flags": [flag.dict() for flag in amber_flags],
+            "verification_status": "verified" if is_verified else "needs_review"
         }
         
     except Exception as e:
@@ -190,7 +201,7 @@ async def generate_report(
 async def transcribe_pain_description(
     session_id: str,
     audio_data: bytes,
-    whisper_service: LLMService = Depends(lambda: Request.app.state.whisper_service)
+    request: Request
 ) -> Dict[str, Any]:
     """
     Transcribe patient's Darija pain description using Whisper API.
@@ -205,6 +216,7 @@ async def transcribe_pain_description(
     """
     try:
         # TODO: Send audio to Whisper API
+        # whisper_service = request.app.state.whisper_service
         # transcription = await whisper_service.transcribe(audio_data)
         
         return {

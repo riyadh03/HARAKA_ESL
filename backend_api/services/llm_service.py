@@ -15,6 +15,7 @@ Author: Haraka.ai Team
 """
 
 import os
+import os
 from typing import Dict, Any, Optional
 from openai import AsyncOpenAI
 import json
@@ -34,9 +35,21 @@ class LLMService:
         
         Loads API key from environment variables.
         """
-        self.api_key = os.getenv("OPENAI_API_KEY")
-        self.client = AsyncOpenAI(api_key=self.api_key) if self.api_key else None
-        self.model = os.getenv("LLM_MODEL", "gpt-4-turbo")
+        # Support both OPENROUTER_API_KEY and OPENAI_API_KEY for flexibility
+        self.api_key = os.getenv("OPENROUTER_API_KEY") or os.getenv("OPENAI_API_KEY")
+        self.model_name = os.getenv("LLM_MODEL", "google/gemini-1.5-pro")
+        
+        self.client = None
+        if self.api_key:
+            # Configure OpenAI client to point to OpenRouter
+            self.client = AsyncOpenAI(
+                api_key=self.api_key,
+                base_url="https://openrouter.ai/api/v1",
+                default_headers={
+                    "HTTP-Referer": "http://localhost:3000",
+                    "X-Title": "Haraka ESL"
+                }
+            )
         
         # Load medical context from prompts/llm_context.md
         self.medical_context = self._load_medical_context()
@@ -87,23 +100,24 @@ class LLMService:
             dict: Generated clinical report with citations
         """
         if not self.client:
-            raise ValueError("OpenAI client not initialized. Check API key.")
+            raise ValueError("OpenRouter client not initialized. Check API key.")
         
         # Construct the grounding prompt
-        prompt = self._construct_grounding_prompt(session_data)
+        system_prompt = self._get_system_prompt()
+        user_prompt = self._construct_grounding_prompt(session_data)
         
         try:
-            # Call LLM API
+            # Call OpenRouter API
             response = await self.client.chat.completions.create(
-                model=self.model,
+                model=self.model_name,
                 messages=[
                     {
                         "role": "system",
-                        "content": self._get_system_prompt()
+                        "content": system_prompt
                     },
                     {
                         "role": "user",
-                        "content": prompt
+                        "content": user_prompt
                     }
                 ],
                 temperature=0.3,  # Low temperature for consistent medical reports
@@ -119,7 +133,7 @@ class LLMService:
             return {
                 "raw_report": report_text,
                 "structured_report": {},  # Placeholder
-                "model_used": self.model,
+                "model_used": self.model_name,
                 "citations_present": True
             }
             
@@ -144,12 +158,13 @@ You are a clinical physiotherapist specializing in tele-rehabilitation for the M
 
 Your task is to generate a clinical report based on exercise session data.
 
-STRICT CONSTRAINTS:
-1. Use ONLY the provided JSON session data. Do not invent or assume information.
-2. Every factual statement MUST cite the JSON field it comes from in brackets [field_name].
-3. Follow the biomechanical rules in the medical context below.
-4. Do not guess or hallucinate biomechanical principles.
-5. If information is missing, state "Data not available" instead of guessing.
+STRICT GROUNDING CONSTRAINTS (CRITICAL - DO NOT HALLUCINATE):
+1. ABSOLUTELY DO NOT invent, hallucinate, or assume ANY information. Use ONLY the provided JSON session data.
+2. EVERY SINGLE factual statement (numbers, achievements, claims) MUST cite the exact JSON field it comes from using brackets like [field_name].
+3. Follow the biomechanical rules in the medical context below implicitly.
+4. Do not guess or hallucinate biomechanical principles under any circumstance.
+5. If information is missing from the JSON data, explicitly state "Data not available" instead of guessing or interpolating.
+6. A statement without a citation is considered a severe failure of these instructions.
 
 MEDICAL CONTEXT:
 {self.medical_context}

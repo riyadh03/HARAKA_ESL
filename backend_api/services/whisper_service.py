@@ -11,7 +11,7 @@ Author: Haraka.ai Team
 """
 
 import os
-from typing import Optional
+from typing import Optional, Dict, Any
 from openai import AsyncOpenAI
 
 

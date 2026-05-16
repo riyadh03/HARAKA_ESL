@@ -23,6 +23,11 @@ Compliance: CNDP 09-08 (Zero-Recording Policy)
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
+from dotenv import load_dotenv
+import os
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Import API routers
 from api.session import router as session_router
@@ -112,7 +117,9 @@ if __name__ == "__main__":
     uvicorn.run(
         "main:app",
         host="0.0.0.0",
-        port=8000,
+        port=8001,
         reload=True,
         log_level="info"
     )
+    # Reload uvicorn 4
+    
