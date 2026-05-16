@@ -56,16 +56,21 @@ const NurseDashboard: React.FC<NurseDashboardProps> = ({ onSessionComplete, onBa
     setIsCounterActive(false);
     
     const sessionData = {
-      exerciseName: "Élévation Latérale du Bras",
-      reps,
-      maxAngle,
-      patientId: "AL-1956",
+      session_id: `sess_${Date.now()}`,
+      patient_id: "AL-1956",
+      exercise_type: "Élévation Latérale du Bras",
       timestamp: new Date().toISOString(),
-      warnings: maxAngle < 90 ? ["Mobilité réduite détectée"] : [],
+      exercise_analytics: {
+        reps,
+        max_angle: maxAngle,
+        warnings: maxAngle < 90 ? ["Mobilité réduite détectée"] : [],
+      },
+      pain_scale: 0,
+      calibration_baseline: {}
     };
 
     try {
-      const response = await fetch('http://localhost:4000/api/analyze-session', {
+      const response = await fetch('http://localhost:8000/api/v1/session/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(sessionData),
@@ -73,7 +78,13 @@ const NurseDashboard: React.FC<NurseDashboardProps> = ({ onSessionComplete, onBa
 
       if (response.ok) {
         const result = await response.json();
-        onSessionComplete(result);
+        // Extract the report to match previous format if necessary, 
+        // or just pass the full structured result
+        onSessionComplete({
+          ...sessionData,
+          report: result.report || result.raw_report,
+          metrics: sessionData.exercise_analytics
+        });
       } else {
         onSessionComplete(sessionData);
       }
