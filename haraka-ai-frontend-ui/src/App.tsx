@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Activity, Stethoscope } from 'lucide-react'
+import { Activity, Stethoscope, Volume2, VolumeX } from 'lucide-react'
 import NurseDashboard from './views/NurseDashboard'
 import DoctorDashboardView from './views/DoctorDashboardView'
 
@@ -8,6 +8,43 @@ type ViewMode = 'selection' | 'nurse' | 'doctor'
 
 export default function App() {
   const [mode, setMode] = useState<ViewMode>('selection')
+  const introAudioRef = useRef<HTMLAudioElement | null>(null)
+  const [isIntroAudioPlaying, setIsIntroAudioPlaying] = useState(false)
+
+  const openNurseSpace = () => {
+    if (typeof window === 'undefined') {
+      setMode('nurse')
+      return
+    }
+
+    const audio = new Audio('/audio/salam.mp3')
+    introAudioRef.current = audio
+    setIsIntroAudioPlaying(true)
+    audio.onended = () => {
+      introAudioRef.current = null
+      setIsIntroAudioPlaying(false)
+      setMode('nurse')
+    }
+    audio.onerror = () => {
+      introAudioRef.current = null
+      setIsIntroAudioPlaying(false)
+      setMode('nurse')
+    }
+    void audio.play().catch(() => {
+      introAudioRef.current = null
+      setIsIntroAudioPlaying(false)
+      setMode('nurse')
+    })
+  }
+
+  const stopIntroAudio = () => {
+    introAudioRef.current?.pause()
+    if (introAudioRef.current) {
+      introAudioRef.current.currentTime = 0
+    }
+    introAudioRef.current = null
+    setIsIntroAudioPlaying(false)
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 font-inter text-slate-900">
@@ -35,7 +72,7 @@ export default function App() {
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  onClick={() => setMode('nurse')}
+                  onClick={openNurseSpace}
                   className="relative overflow-hidden group text-left rounded-[2.5rem] bg-white border border-slate-200 p-8 md:p-12 shadow-sm hover:shadow-xl hover:border-blue-200 transition-all duration-300 h-[400px] flex flex-col justify-end"
                 >
                   {/* Decorative Blob */}
@@ -78,6 +115,20 @@ export default function App() {
                     </p>
                   </div>
                 </motion.button>
+              </div>
+
+              <div className="mt-6 flex justify-center">
+                <button
+                  onClick={isIntroAudioPlaying ? stopIntroAudio : openNurseSpace}
+                  className={`inline-flex items-center gap-2 px-5 py-3 rounded-full font-semibold shadow-sm transition-colors ${
+                    isIntroAudioPlaying
+                      ? 'bg-rose-600 text-white hover:bg-rose-700'
+                      : 'bg-emerald-600 text-white hover:bg-emerald-700'
+                  }`}
+                >
+                  {isIntroAudioPlaying ? <VolumeX size={18} /> : <Volume2 size={18} />}
+                  {isIntroAudioPlaying ? 'Stop Salam Audio' : 'Play Salam Audio'}
+                </button>
               </div>
             </div>
           </motion.div>
