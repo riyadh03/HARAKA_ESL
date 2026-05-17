@@ -14,7 +14,6 @@ declare global {
     POSE_CONNECTIONS: any;
   }
 }
-import { Camera as CameraIcon, CheckCircle2, AlertCircle, Play, RefreshCw, Send, ArrowLeft, Volume2, VolumeX } from "lucide-react";
 
 interface NurseDashboardProps {
   onSessionComplete: (data: any) => void;
@@ -209,12 +208,9 @@ const NurseDashboard: React.FC<NurseDashboardProps> = ({ onSessionComplete, onBa
     countdownAudioRef.current = null;
     setIsCountdownAudioPlaying(false);
     setCountdown(null);
-    countdownAudioRef.current = null
-    setIsCountdownAudioPlaying(false)
-    setCountdown(null)
-    setIsCounterActive(false)
-    setIsStarted(false)
-  }
+    setIsCounterActive(false);
+    setIsStarted(false);
+  };
 
   const playSalam = () => {
     if (typeof window === 'undefined') return
