@@ -14,10 +14,12 @@ export default function App() {
   const [isIntroAudioPlaying, setIsIntroAudioPlaying] = useState(false)
 
   const openNurseSpace = () => {
-    if (typeof window === 'undefined') {
-      setMode('nurse')
-      return
-    }
+    // Enter nurse view immediately; salam audio is optional
+    setMode('nurse')
+  }
+
+  const playSalam = () => {
+    if (typeof window === 'undefined') return
 
     const audio = new Audio('/audio/salam.mp3')
     introAudioRef.current = audio
@@ -25,17 +27,14 @@ export default function App() {
     audio.onended = () => {
       introAudioRef.current = null
       setIsIntroAudioPlaying(false)
-      setMode('nurse')
     }
     audio.onerror = () => {
       introAudioRef.current = null
       setIsIntroAudioPlaying(false)
-      setMode('nurse')
     }
     void audio.play().catch(() => {
       introAudioRef.current = null
       setIsIntroAudioPlaying(false)
-      setMode('nurse')
     })
   }
 
@@ -88,6 +87,18 @@ export default function App() {
                   <div className="absolute top-8 left-8 bg-blue-50 text-blue-600 p-4 rounded-3xl shadow-sm group-hover:scale-110 transition-transform duration-300">
                     <Activity size={48} strokeWidth={1.5} />
                   </div>
+                  {/* Salam toggle */}
+                  <div className="absolute top-8 right-8">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        isIntroAudioPlaying ? stopIntroAudio() : playSalam()
+                      }}
+                      className="bg-white/90 text-blue-600 p-3 rounded-lg shadow-sm hover:scale-105 transition-transform"
+                    >
+                      {isIntroAudioPlaying ? <VolumeX size={20} /> : <Volume2 size={20} />}
+                    </button>
+                  </div>
                   
                   <div className="relative z-10">
                     <h2 className="font-outfit text-3xl font-bold text-slate-900 mb-3 group-hover:text-blue-600 transition-colors">
@@ -124,19 +135,7 @@ export default function App() {
                 </motion.button>
               </div>
 
-              <div className="mt-6 flex justify-center">
-                <button
-                  onClick={isIntroAudioPlaying ? stopIntroAudio : openNurseSpace}
-                  className={`inline-flex items-center gap-2 px-5 py-3 rounded-full font-semibold shadow-sm transition-colors ${
-                    isIntroAudioPlaying
-                      ? 'bg-rose-600 text-white hover:bg-rose-700'
-                      : 'bg-emerald-600 text-white hover:bg-emerald-700'
-                  }`}
-                >
-                  {isIntroAudioPlaying ? <VolumeX size={18} /> : <Volume2 size={18} />}
-                  {isIntroAudioPlaying ? 'Stop Salam Audio' : 'Play Salam Audio'}
-                </button>
-              </div>
+              {/* Nurse entry is handled by clicking the Nurse card; salam toggle remains on the card */}
             </div>
           </motion.div>
         )}
