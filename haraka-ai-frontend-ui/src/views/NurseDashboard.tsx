@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Camera as CameraIcon, CheckCircle2, AlertCircle, Play, RefreshCw, Send, ArrowLeft, Volume2, VolumeX } from "lucide-react";
+import { Camera as CameraIcon, CheckCircle2, AlertCircle, Play, RefreshCw, Send, ArrowLeft } from "lucide-react";
 import { calculateAngle, areLandmarksVisible } from "../utils/biomechanics";
 import { Pose } from "@mediapipe/pose";
 import { Camera } from "@mediapipe/camera_utils";
@@ -11,8 +11,6 @@ declare global {
   interface Window {
     Pose: any;
     Camera: any;
-    drawConnectors: any;
-    drawLandmarks: any;
     POSE_CONNECTIONS: any;
   }
 }
@@ -46,6 +44,7 @@ const NurseDashboard: React.FC<NurseDashboardProps> = ({ onSessionComplete, onBa
   const [baselineAngles, setBaselineAngles] = useState<{ [key: string]: number }>({});
   const [isCalibrating, setIsCalibrating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [score, setScore] = useState(0); // New state for the score
 
   // Refs for tracking mutable state inside MediaPipe callbacks without causing stale closures
   const repsRef = useRef(0);
@@ -64,9 +63,7 @@ const NurseDashboard: React.FC<NurseDashboardProps> = ({ onSessionComplete, onBa
     const initializeMediaPipe = () => {
       if (!videoRef.current || !canvasRef.current || !window.Pose) return;
 
-      const { Pose, Camera, drawConnectors, drawLandmarks, POSE_CONNECTIONS } = window;
-
-      pose = new Pose({
+      pose = new window.Pose({
         locateFile: (file: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`,
       });
 
@@ -93,35 +90,24 @@ const NurseDashboard: React.FC<NurseDashboardProps> = ({ onSessionComplete, onBa
 
         // Ensure we have landmarks
         if (results.poseLandmarks) {
-          // Draw skeleton
-          drawConnectors(canvasCtx, results.poseLandmarks, POSE_CONNECTIONS, { color: '#10b981', lineWidth: 4 });
-          drawLandmarks(canvasCtx, results.poseLandmarks, { color: '#ffffff', lineWidth: 2, radius: 4 });
-
-          // Extract Left Arm Joints (11: Shoulder, 13: Elbow, 15: Wrist)
-          // For a lateral raise, we typically measure the angle between Hip(23), Shoulder(11), and Elbow(13)
-          const leftHip = results.poseLandmarks[23];
-          const leftShoulder = results.poseLandmarks[11];
-          const leftElbow = results.poseLandmarks[13];
+          const landmarks = results.poseLandmarks;
+          const leftHip = landmarks[23];
+          const leftShoulder = landmarks[11];
+          const leftWrist = landmarks[15];
 
           // Check if patient is fully in frame (segmentation accuracy)
-          const isAligned = areLandmarksVisible([leftHip, leftShoulder, leftKnee], 0.65);
+          const isAligned = areLandmarksVisible([leftHip, leftShoulder], 0.65);
           setIsPoseAligned(isAligned);
 
           if (isCalibrating) {
-            const baselineAngle = calculateAngle(leftHip, leftShoulder, leftKnee);
+            const baselineAngle = calculateAngle(leftHip, leftShoulder, leftWrist);
             setBaselineAngles((prev) => ({ ...prev, [selectedExercise || "default"]: baselineAngle }));
           } else if (isAligned && isCounterActiveRef.current) {
-            // Calculate biomechanical angle
-            const angle = calculateAngle(leftHip, leftShoulder, leftElbow);
-            const currentAngle = Math.round(angle);
-
-            // Only update React state if changed significantly to avoid lagging the UI
-            setLastAngle((prev) => (Math.abs(prev - currentAngle) > 2 ? currentAngle : prev));
-
-            // Track Max Angle
-            if (currentAngle > maxAngleRef.current) {
-              maxAngleRef.current = currentAngle;
-              setMaxAngle(currentAngle);
+            let currentAngle = 0;
+            if (selectedExercise === "Lumbar Extension") {
+              currentAngle = calculateAngle(leftHip, leftShoulder, leftWrist);
+            } else if (selectedExercise === "Arm Raise") {
+              currentAngle = calculateAngle(leftShoulder, leftWrist, leftHip);
             }
 
             const normalizedAngle = currentAngle - (baselineAngles[selectedExercise || "default"] || 0);
@@ -155,7 +141,7 @@ const NurseDashboard: React.FC<NurseDashboardProps> = ({ onSessionComplete, onBa
       });
 
       // Start the Camera
-      camera = new Camera(videoRef.current, {
+      camera = new window.Camera(videoRef.current, {
         onFrame: async () => {
           if (videoRef.current && pose) {
             await pose.send({ image: videoRef.current });
@@ -194,62 +180,6 @@ const NurseDashboard: React.FC<NurseDashboardProps> = ({ onSessionComplete, onBa
     setIsCounterActive(false);
   };
 
-  const playSalam = () => {
-    if (typeof window === 'undefined') return
-
-    // If an Audio instance already exists, resume it instead of creating a new one
-    if (introAudioRef.current) {
-      const existing = introAudioRef.current
-      // If already playing, do nothing
-      if (!existing.paused) {
-        setIsIntroAudioPlaying(true)
-        return
-      }
-      existing.play().then(() => setIsIntroAudioPlaying(true)).catch(() => {
-        introAudioRef.current = null
-        setIsIntroAudioPlaying(false)
-      })
-      return
-    }
-
-    const audio = new Audio('/audio/salam.mp3')
-    introAudioRef.current = audio
-    setIsIntroAudioPlaying(true)
-    audio.onended = () => {
-      introAudioRef.current = null
-      setIsIntroAudioPlaying(false)
-    }
-    audio.onerror = () => {
-      introAudioRef.current = null
-      setIsIntroAudioPlaying(false)
-    }
-    void audio.play().catch(() => {
-      introAudioRef.current = null
-      setIsIntroAudioPlaying(false)
-    })
-  }
-
-  const stopIntroAudio = () => {
-    const a = introAudioRef.current
-    if (!a) {
-      setIsIntroAudioPlaying(false)
-      return
-    }
-    try {
-      a.pause()
-      a.currentTime = 0
-    } catch {
-      // ignore
-    }
-    introAudioRef.current = null
-    setIsIntroAudioPlaying(false)
-  }
-
-  const stopWorkout = async () => {
-    setIsCounterActive(false);
-    setIsStarted(false);
-  };
-
   // Step 1: Stop the workout and show the pain scale
   const enterPostSession = () => {
     setIsCounterActive(false);
@@ -264,15 +194,16 @@ const NurseDashboard: React.FC<NurseDashboardProps> = ({ onSessionComplete, onBa
     const sessionData = {
       session_id: `sess_${Date.now()}`,
       patient_id: "AL-1956",
-      exercise_type: "Élévation Latérale du Bras",
+      exercise_type: selectedExercise,
       timestamp: new Date().toISOString(),
       exercise_analytics: {
         reps,
-        max_angle: 0,
-        warnings: 0 < 90 ? ["Mobilité réduite détectée"] : [],
+        max_angle: lastAngle,
+        score, // Include the score in the report
+        warnings: lastAngle < 90 ? ["Mobilité réduite détectée"] : [],
       },
       pain_scale: painScore,
-      calibration_baseline: {}
+      calibration_baseline: baselineAngles,
     };
 
     try {
@@ -289,7 +220,7 @@ const NurseDashboard: React.FC<NurseDashboardProps> = ({ onSessionComplete, onBa
           report: result.report || result.raw_report,
           amber_flags: result.amber_flags || [],
           verification_status: result.verification_status,
-          metrics: sessionData.exercise_analytics
+          metrics: sessionData.exercise_analytics,
         });
       } else {
         onSessionComplete(sessionData);
@@ -300,6 +231,20 @@ const NurseDashboard: React.FC<NurseDashboardProps> = ({ onSessionComplete, onBa
       setIsSubmitting(false);
     }
   };
+
+  const calculateScore = (reps: number, normalizedAngle: number) => {
+    // Example scoring logic: reps contribute 70%, angle contributes 30%
+    const angleScore = Math.min(normalizedAngle / 180, 1) * 30; // Normalize angle to a max of 30 points
+    const repScore = Math.min(reps, 20) * 3.5; // Max 20 reps, each worth 3.5 points
+    return Math.round(angleScore + repScore);
+  };
+
+  useEffect(() => {
+    if (isCounterActiveRef.current) {
+      const newScore = calculateScore(repsRef.current, lastAngle);
+      setScore(newScore);
+    }
+  }, [reps, lastAngle]);
 
   return (
     <div className="min-h-screen bg-slate-50 p-4 md:p-6 lg:p-8 flex flex-col font-inter">
@@ -323,16 +268,6 @@ const NurseDashboard: React.FC<NurseDashboardProps> = ({ onSessionComplete, onBa
           }`}>
           {isPoseAligned ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
           <span>{isPoseAligned ? 'Sujet Aligné' : 'Recherche du Sujet...'}</span>
-        </div>
-        
-        {/* Salam audio toggle */}
-        <div className="ml-4">
-          <button
-            onClick={() => (isIntroAudioPlaying ? stopIntroAudio() : playSalam())}
-            className="p-2 bg-white rounded-full shadow-sm hover:scale-105 transition-transform"
-          >
-            {isIntroAudioPlaying ? <VolumeX size={20} className="text-slate-700" /> : <Volume2 size={20} className="text-slate-700" />}
-          </button>
         </div>
       </header>
 
