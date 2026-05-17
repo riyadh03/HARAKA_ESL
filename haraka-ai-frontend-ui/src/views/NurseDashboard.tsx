@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Camera as CameraIcon, CheckCircle2, AlertCircle, Play, RefreshCw, Send, ArrowLeft } from "lucide-react";
 import { calculateAngle, areLandmarksVisible } from "../utils/biomechanics";
+import EmojiPainScale from "../components/nurse/EmojiPainScale";
 
 // Use global window objects loaded via CDN in index.html
 declare global {
@@ -19,19 +20,31 @@ interface NurseDashboardProps {
   onBack?: () => void;
 }
 
+const speak = (text: string) => {
+  if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+    const utterance = new SpeechSynthesisUtterance(text);
+    // Use French voice as a fallback since Darija TTS isn't standard, but the text is phonetically readable.
+    utterance.lang = 'fr-FR'; 
+    window.speechSynthesis.speak(utterance);
+  }
+};
+
 const NurseDashboard: React.FC<NurseDashboardProps> = ({ onSessionComplete, onBack }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const countdownAudioRef = useRef<HTMLAudioElement | null>(null);
-  
+
   const [isStarted, setIsStarted] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [isCountdownAudioPlaying, setIsCountdownAudioPlaying] = useState(false);
   const [reps, setReps] = useState(0);
   const [maxAngle, setMaxAngle] = useState(0);
   const [isPoseAligned, setIsPoseAligned] = useState(false);
+  const [isPostSession, setIsPostSession] = useState(false);
+  const [painScore, setPainScore] = useState(2);
   const [isCounterActive, setIsCounterActive] = useState(false);
   const [lastAngle, setLastAngle] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Refs for tracking mutable state inside MediaPipe callbacks without causing stale closures
   const repsRef = useRef(0);
@@ -72,7 +85,7 @@ const NurseDashboard: React.FC<NurseDashboardProps> = ({ onSessionComplete, onBa
 
         canvasCtx.save();
         canvasCtx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-        
+
         // Draw the camera frame
         if (results.image) {
           canvasCtx.drawImage(results.image, 0, 0, canvasRef.current.width, canvasRef.current.height);
@@ -86,7 +99,6 @@ const NurseDashboard: React.FC<NurseDashboardProps> = ({ onSessionComplete, onBa
 
           // Extract Left Arm Joints (11: Shoulder, 13: Elbow, 15: Wrist)
           // For a lateral raise, we typically measure the angle between Hip(23), Shoulder(11), and Elbow(13)
-          // Or just Torso to Arm angle
           const leftHip = results.poseLandmarks[23];
           const leftShoulder = results.poseLandmarks[11];
           const leftElbow = results.poseLandmarks[13];
@@ -99,7 +111,7 @@ const NurseDashboard: React.FC<NurseDashboardProps> = ({ onSessionComplete, onBa
             // Calculate biomechanical angle
             const angle = calculateAngle(leftHip, leftShoulder, leftElbow);
             const currentAngle = Math.round(angle);
-            
+
             // Only update React state if changed significantly to avoid lagging the UI
             setLastAngle((prev) => (Math.abs(prev - currentAngle) > 2 ? currentAngle : prev));
 
@@ -123,7 +135,7 @@ const NurseDashboard: React.FC<NurseDashboardProps> = ({ onSessionComplete, onBa
         } else {
           setIsPoseAligned(false);
         }
-        
+
         canvasCtx.restore();
       });
 
@@ -137,7 +149,7 @@ const NurseDashboard: React.FC<NurseDashboardProps> = ({ onSessionComplete, onBa
         width: 1280,
         height: 720,
       });
-      
+
       camera.start();
     };
 
@@ -165,7 +177,7 @@ const NurseDashboard: React.FC<NurseDashboardProps> = ({ onSessionComplete, onBa
     const audio = new Audio('/audio/tlatajoujwahed.mp3');
     countdownAudioRef.current = audio;
     setIsCountdownAudioPlaying(true);
-    
+
     audio.onended = () => {
       setIsCountdownAudioPlaying(false);
       countdownAudioRef.current = null;
@@ -198,9 +210,16 @@ const NurseDashboard: React.FC<NurseDashboardProps> = ({ onSessionComplete, onBa
     setIsStarted(false);
   };
 
-  const stopWorkout = async () => {
+  // Step 1: Stop the workout and show the pain scale
+  const enterPostSession = () => {
     setIsCounterActive(false);
-    
+    setIsPostSession(true);
+    speak('Kidayr m3a lewja3 daba ?');
+  };
+
+  // Step 2: Submit the final session with the pain score
+  const submitFinalSession = async () => {
+    setIsSubmitting(true);
     const sessionData = {
       session_id: `sess_${Date.now()}`,
       patient_id: "AL-1956",
@@ -211,7 +230,7 @@ const NurseDashboard: React.FC<NurseDashboardProps> = ({ onSessionComplete, onBa
         max_angle: maxAngle,
         warnings: maxAngle < 90 ? ["Mobilité réduite détectée"] : [],
       },
-      pain_scale: 0,
+      pain_scale: painScore,
       calibration_baseline: {}
     };
 
@@ -236,6 +255,8 @@ const NurseDashboard: React.FC<NurseDashboardProps> = ({ onSessionComplete, onBa
       }
     } catch (error) {
       onSessionComplete(sessionData);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -265,10 +286,9 @@ const NurseDashboard: React.FC<NurseDashboardProps> = ({ onSessionComplete, onBa
             <p className="text-slate-500 font-medium">Session de rééducation assistée par Edge-AI</p>
           </div>
         </div>
-        
-        <div className={`px-4 py-2 rounded-full flex items-center gap-2 text-sm font-bold shadow-sm transition-colors duration-300 ${
-          isPoseAligned ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
-        }`}>
+
+        <div className={`px-4 py-2 rounded-full flex items-center gap-2 text-sm font-bold shadow-sm transition-colors duration-300 ${isPoseAligned ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+          }`}>
           {isPoseAligned ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
           <span>{isPoseAligned ? 'Sujet Aligné' : 'Recherche du Sujet...'}</span>
         </div>
@@ -278,10 +298,10 @@ const NurseDashboard: React.FC<NurseDashboardProps> = ({ onSessionComplete, onBa
         <div className="lg:col-span-2 relative bg-slate-900 rounded-[2.5rem] overflow-hidden shadow-xl border-4 border-white flex flex-col items-center justify-center min-h-[500px]">
           {/* MediaPipe rendering Canvas */}
           <canvas ref={canvasRef} width={1280} height={720} className="absolute inset-0 w-full h-full object-cover" />
-          
+
           <AnimatePresence>
             {countdown !== null && (
-              <motion.div 
+              <motion.div
                 initial={{ scale: 0.8, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 1.5, opacity: 0 }}
@@ -316,9 +336,8 @@ const NurseDashboard: React.FC<NurseDashboardProps> = ({ onSessionComplete, onBa
                 <button
                   onClick={startWorkout}
                   disabled={!isPoseAligned}
-                  className={`px-8 py-4 rounded-full font-bold text-lg flex items-center justify-center gap-3 mx-auto transition-all ${
-                    isPoseAligned ? 'bg-white text-emerald-600 shadow-xl hover:scale-105 active:scale-95' : 'bg-slate-700 text-slate-400 cursor-not-allowed opacity-50'
-                  }`}
+                  className={`px-8 py-4 rounded-full font-bold text-lg flex items-center justify-center gap-3 mx-auto transition-all ${isPoseAligned ? 'bg-white text-emerald-600 shadow-xl hover:scale-105 active:scale-95' : 'bg-slate-700 text-slate-400 cursor-not-allowed opacity-50'
+                    }`}
                 >
                   <Play fill="currentColor" size={20} />
                   Démarrer la Session
@@ -331,7 +350,7 @@ const NurseDashboard: React.FC<NurseDashboardProps> = ({ onSessionComplete, onBa
         <div className="lg:col-span-1 flex flex-col gap-6">
           <div className="bg-white rounded-[2.5rem] p-8 border border-slate-200 shadow-sm flex flex-col items-center justify-center flex-1">
             <span className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4">Répétitions</span>
-            <motion.span 
+            <motion.span
               key={reps}
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
@@ -353,16 +372,29 @@ const NurseDashboard: React.FC<NurseDashboardProps> = ({ onSessionComplete, onBa
           </div>
 
           <div className="bg-white rounded-[2.5rem] p-6 border border-slate-200 shadow-sm flex flex-col gap-4">
-            {isCounterActive ? (
-              <>
+            {isPostSession ? (
+              <div className="flex flex-col gap-4">
+                <h3 className="font-outfit text-lg font-bold text-slate-900 mb-2">Évaluation de la douleur</h3>
+                <EmojiPainScale painScore={painScore} onPainScoreChange={setPainScore} />
                 <button
-                  onClick={stopWorkout}
-                  className="w-full bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold py-4 rounded-2xl shadow-lg shadow-emerald-600/20 transition-all flex items-center justify-center gap-2"
+                  onClick={submitFinalSession}
+                  disabled={isSubmitting}
+                  className="mt-4 w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-bold py-4 rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2"
                 >
                   <Send size={20} />
-                  Terminer
+                  {isSubmitting ? "Envoi en cours..." : "Soumettre le Rapport"}
                 </button>
-                <button 
+              </div>
+            ) : isCounterActive ? (
+              <>
+                <button
+                  onClick={enterPostSession}
+                  className="w-full bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold py-4 rounded-2xl shadow-lg shadow-emerald-600/20 transition-all flex items-center justify-center gap-2"
+                >
+                  <CheckCircle2 size={20} />
+                  Terminer l'Exercice
+                </button>
+                <button
                   onClick={() => window.location.reload()}
                   className="w-full py-3 text-slate-500 font-bold flex items-center justify-center gap-2 hover:bg-slate-100 hover:text-slate-700 rounded-2xl transition-colors"
                 >

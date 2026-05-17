@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Mic, MicOff, AlertCircle } from 'lucide-react'
+import { AlertCircle } from 'lucide-react'
+import EmojiPainScale from './EmojiPainScale'
 
 interface SessionPanelProps {
   sessionState: 'calibration' | 'exercise' | 'post-session'
@@ -9,9 +10,7 @@ interface SessionPanelProps {
   jointAngle: number
   showAlert: boolean
   painScore: number
-  isRecording: boolean
   onPainScoreChange: (score: number) => void
-  onRecordingToggle: (recording: boolean) => void
   onSimulateExercise: () => void
   onCompleteSession: () => void
 }
@@ -23,9 +22,7 @@ export default function SessionPanel({
   jointAngle,
   showAlert,
   painScore,
-  isRecording,
   onPainScoreChange,
-  onRecordingToggle,
   onSimulateExercise,
   onCompleteSession,
 }: SessionPanelProps) {
@@ -37,9 +34,6 @@ export default function SessionPanel({
       return () => clearTimeout(timer)
     }
   }, [calibrationTime, sessionState])
-
-  const painEmojis = ['😊', '🙂', '😐', '😕', '😢']
-  const painColors = ['bg-green-500', 'bg-yellow-500', 'bg-orange-400', 'bg-orange-600', 'bg-red-600']
 
   return (
     <div className="flex-1 flex flex-col gap-3">
@@ -161,43 +155,7 @@ export default function SessionPanel({
           className="bg-white rounded-xl p-4 border border-slate-200 flex-1 flex flex-col"
         >
           <h3 className="font-outfit font-bold text-slate-900 mb-4">Pain Assessment</h3>
-
-          {/* Pain Scale */}
-          <div className="mb-4">
-            <div className="flex gap-2 mb-3">
-              {painEmojis.map((emoji, idx) => (
-                <motion.button
-                  key={idx}
-                  onClick={() => onPainScoreChange(idx)}
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.95 }}
-                  className={`flex-1 py-3 rounded-lg text-2xl transition-all ${
-                    painScore === idx ? `${painColors[idx]} scale-110 shadow-lg` : 'bg-slate-100 scale-100'
-                  }`}
-                >
-                  {emoji}
-                </motion.button>
-              ))}
-            </div>
-            <p className="text-xs text-slate-600 text-center">
-              {['No pain', 'Mild', 'Moderate', 'Severe', 'Worst pain'][painScore]}
-            </p>
-          </div>
-
-          {/* Voice Recording */}
-          <motion.button
-            onClick={() => onRecordingToggle(!isRecording)}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            className={`w-full flex items-center justify-center gap-2 py-3 rounded-lg font-medium transition-all shadow-md hover:shadow-lg ${
-              isRecording
-                ? 'bg-red-600 text-white hover:bg-red-700'
-                : 'bg-emerald-600 text-white hover:bg-emerald-700'
-            }`}
-          >
-            {isRecording ? <MicOff size={20} /> : <Mic size={20} />}
-            {isRecording ? 'Stop Recording' : 'Record Voice Note'}
-          </motion.button>
+          <EmojiPainScale painScore={painScore} onPainScoreChange={onPainScoreChange} />
         </motion.div>
       )}
     </div>

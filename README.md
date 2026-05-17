@@ -38,9 +38,17 @@ haraka_ai_project/
 │   │   └── audio/                 # Offline audio files
 │   ├── src/
 │   │   ├── components/
-│   │   │   └── NurseDashboard.tsx # MediaPipe Pose + Edge AI counting
+│   │   │   ├── nurse/
+│   │   │   │   ├── CameraFeed.tsx    # Privacy modes (blur/silhouette)
+│   │   │   │   └── EmojiPainScale.tsx # 5-face pain scale UI
+│   │   │   └── doctor/
+│   │   │       ├── PatientReport.tsx  # LLM report rendering
+│   │   │       └── TriageInbox.tsx    # Clinician dashboard
+│   │   ├── views/
+│   │   │   ├── NurseDashboard.tsx    # MediaPipe Pose + Edge AI counting
+│   │   │   └── DoctorDashboardView.tsx
 │   │   ├── utils/
-│   │   │   └── biomechanics.ts    # Real-time joint angle mathematics
+│   │   │   └── biomechanics.ts       # Real-time joint angle mathematics
 │   │   └── App.tsx
 │   ├── Dockerfile
 │   └── package.json
@@ -66,7 +74,13 @@ haraka_ai_project/
 1. Edge-AI Computer Vision (MediaPipe)
 - The React frontend runs Google MediaPipe Pose entirely in the browser. Biomechanical math computes the arm angle and automatically counts repetitions using a custom state machine. No video is ever sent to the cloud, ensuring 100% CNDP privacy compliance.
 
-2. Patient-Relative Baseline Calibration & Coaching
+<<<<<<< HEAD
+2. Dual-Signal Pain Processing
+- A 5-emoji Wong–Baker style scale provides a low-literacy quantitative pain measure. After the session ends, patients select the emoji directly (no microphone button).
+- End-of-session prompt: "Kidayr m3a lewja3 daba ?" is played to guide the selection.
+- Whisper transcribes the patient’s Darija verbal description to add qualitative nuance for the LLM.
+
+3. Patient-Relative Baseline Calibration & Coaching
 - The UI plays reassuring Darija audio prompts (e.g. "Tleta... Jouj... Wahed...") explaining the Zero-Recording policy and guiding the patient.
 
 3. Cloud LLM Integration via OpenRouter
