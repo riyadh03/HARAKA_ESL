@@ -3,11 +3,13 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Activity, Stethoscope, Volume2, VolumeX } from 'lucide-react'
 import NurseDashboard from './views/NurseDashboard'
 import DoctorDashboardView from './views/DoctorDashboardView'
+import ReportView from './views/ReportView'
 
-type ViewMode = 'selection' | 'nurse' | 'doctor'
+type ViewMode = 'selection' | 'nurse' | 'doctor' | 'report'
 
 export default function App() {
   const [mode, setMode] = useState<ViewMode>('selection')
+  const [completedSessionData, setCompletedSessionData] = useState<any>(null)
   const introAudioRef = useRef<HTMLAudioElement | null>(null)
   const [isIntroAudioPlaying, setIsIntroAudioPlaying] = useState(false)
 
@@ -45,6 +47,11 @@ export default function App() {
     introAudioRef.current = null
     setIsIntroAudioPlaying(false)
   }
+
+  const handleSessionComplete = (data: any) => {
+    setCompletedSessionData(data);
+    setMode('report');
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 font-inter text-slate-900">
@@ -142,7 +149,19 @@ export default function App() {
             exit={{ opacity: 0, scale: 0.98 }}
             className="min-h-screen bg-slate-50"
           >
-            <NurseDashboard onSessionComplete={(data) => console.log('Session:', data)} onBack={() => setMode('selection')} />
+            <NurseDashboard onSessionComplete={handleSessionComplete} onBack={() => setMode('selection')} />
+          </motion.div>
+        )}
+
+        {mode === 'report' && completedSessionData && (
+          <motion.div
+            key="report"
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.98 }}
+            className="min-h-screen bg-slate-50"
+          >
+            <ReportView data={completedSessionData} onClose={() => setMode('selection')} />
           </motion.div>
         )}
 

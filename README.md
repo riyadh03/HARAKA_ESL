@@ -33,28 +33,29 @@ Privacy-first design: the system follows a strict Zero-Recording policy — no v
 ```
 haraka_ai_project/
 │
-├── haraka-ai-frontend-ui/         # ⚛️ React app (Nurse + Clinician) + Express Server
+├── haraka-ai-frontend-ui/         # ⚛️ React app (Nurse Dashboard)
 │   ├── public/
 │   │   └── audio/                 # Offline audio files
 │   ├── src/
 │   │   ├── components/
-│   │   │   ├── CameraTracker.jsx  # MediaPipe Pose + Canvas (privacy blur)
-│   │   │   ├── EmojiPainScale.jsx # 5-face pain scale UI
-│   │   │   └── TriageInbox.jsx    # Clinician dashboard
-│   │   ├── hooks/
-│   │   │   └── useCalibration.js  # Patient-relative baseline calibration
-│   │   └── App.js
-│   ├── server.ts                  # Express Backend for LLM Bridge
+│   │   │   └── NurseDashboard.tsx # MediaPipe Pose + Edge AI counting
+│   │   ├── utils/
+│   │   │   └── biomechanics.ts    # Real-time joint angle mathematics
+│   │   └── App.tsx
 │   ├── Dockerfile
 │   └── package.json
 │
 ├── backend_api/                   # 🐍 Python FastAPI server
 │   ├── main.py                    # API endpoints
+│   ├── api/
+│   │   └── session.py             # OpenRouter LLM integration
+│   ├── utils/
+│   │   └── amber_flag_verifier.py # Hallucination checking
 │   ├── requirements.txt
 │   ├── Dockerfile
 │   └── .env                       # API keys - DO NOT COMMIT
 │
-├── docker-compose.yml             # Orchestrates Frontend, Node API, and Python API
+├── docker-compose.yml             # Orchestrates Frontend and Python API
 └── README.md
 ```
 
@@ -62,14 +63,17 @@ haraka_ai_project/
 
 ## Key Technical Features (Hackathon Highlights)
 
-1. Patient-Relative Baseline Calibration
-- Instead of hard-coded thresholds (e.g., trunk deviation > 25mm), the React `useCalibration.js` hook records a patient-specific baseline during the first 30 seconds. This reduces false positives from age-related posture differences or scoliosis. The UI plays a reassuring Darija audio prompt explaining Zero-Recording.
+1. Edge-AI Computer Vision (MediaPipe)
+- The React frontend runs Google MediaPipe Pose entirely in the browser. Biomechanical math computes the arm angle and automatically counts repetitions using a custom state machine. No video is ever sent to the cloud, ensuring 100% CNDP privacy compliance.
 
-2. Dual-Signal Pain Processing
-- A 5-emoji Wong–Baker style scale provides a low-literacy quantitative pain measure. Whisper transcribes the patient’s Darija verbal description to add qualitative nuance for the LLM.
+2. Patient-Relative Baseline Calibration & Coaching
+- The UI plays reassuring Darija audio prompts (e.g. "Tleta... Jouj... Wahed...") explaining the Zero-Recording policy and guiding the patient.
 
-3. Triage Dashboard & Amber Flags
-- `TriageInbox.jsx` sorts clinician JSON reports. The backend validates LLM output: every factual sentence must cite the JSON field it was grounded from (e.g., `[exercise_analytics.max_angle]`). Any sentence not supported by the JSON is highlighted as an ORANGE "Amber Flag" to help clinicians quickly find hallucinations.
+3. Cloud LLM Integration via OpenRouter
+- The FastAPI backend packages Edge-AI JSON data and sends it to OpenRouter (using Llama 3 or similar) to generate an automated, highly structured clinical report.
+
+4. Triage Dashboard & Amber Flags
+- The backend validates LLM output using an `AmberFlagVerifier`. Every factual sentence must cite the JSON field it was grounded from (e.g., `[exercise_analytics.max_angle]`). Any sentence not supported by the JSON is highlighted as an ORANGE "Amber Flag" to help clinicians quickly spot AI hallucinations.
 
 ---
 
@@ -79,19 +83,18 @@ The project is fully Dockerized for an easy, consistent development environment.
 
 ### Prerequisites
 - Docker and Docker Compose installed and running on your machine.
-- Set up your `.env` variables (e.g. `OPENAI_API_KEY`, `GOOGLE_API_KEY`) locally.
+- Set up your `.env` variables (e.g. `OPENROUTER_API_KEY`) locally.
 
 ### Run with Docker
 
 Simply run the following command in the root directory:
 
 ```bash
-docker compose up --build
+docker compose up --build -d
 ```
 
 The services will be exposed at the following local ports:
 - **Frontend UI (React/Vite):** `http://localhost:3000`
-- **Express Backend (Node.js):** `http://localhost:4000/api/health`
 - **FastAPI Backend (Python):** `http://localhost:8000`
 
 > **Note:** Hot-reloading is enabled via Docker volume mounts. Changes to your local source code will immediately reflect in the running containers without needing to rebuild.
