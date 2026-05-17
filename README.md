@@ -39,7 +39,7 @@ haraka_ai_project/
 │   ├── src/
 │   │   ├── components/
 │   │   │   ├── CameraTracker.jsx  # MediaPipe Pose + Canvas (privacy blur)
-│   │   │   ├── EmojiPainScale.jsx # 5-face pain scale UI
+│   │   │   ├── EmojiPainScale.tsx # 5-face pain scale UI
 │   │   │   └── TriageInbox.jsx    # Clinician dashboard
 │   │   ├── hooks/
 │   │   │   └── useCalibration.js  # Patient-relative baseline calibration
@@ -66,7 +66,9 @@ haraka_ai_project/
 - Instead of hard-coded thresholds (e.g., trunk deviation > 25mm), the React `useCalibration.js` hook records a patient-specific baseline during the first 30 seconds. This reduces false positives from age-related posture differences or scoliosis. The UI plays a reassuring Darija audio prompt explaining Zero-Recording.
 
 2. Dual-Signal Pain Processing
-- A 5-emoji Wong–Baker style scale provides a low-literacy quantitative pain measure. Whisper transcribes the patient’s Darija verbal description to add qualitative nuance for the LLM.
+- A 5-emoji Wong–Baker style scale provides a low-literacy quantitative pain measure. After the session ends, patients select the emoji directly (no microphone button).
+- End-of-session prompt: "Kidayr m3a lewja3 daba ?" is played to guide the selection.
+- Whisper transcribes the patient’s Darija verbal description to add qualitative nuance for the LLM.
 
 3. Triage Dashboard & Amber Flags
 - `TriageInbox.jsx` sorts clinician JSON reports. The backend validates LLM output: every factual sentence must cite the JSON field it was grounded from (e.g., `[exercise_analytics.max_angle]`). Any sentence not supported by the JSON is highlighted as an ORANGE "Amber Flag" to help clinicians quickly find hallucinations.
