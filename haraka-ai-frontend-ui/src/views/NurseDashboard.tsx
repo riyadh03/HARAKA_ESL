@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Camera as CameraIcon, CheckCircle2, AlertCircle, Play, RefreshCw, Send, ArrowLeft } from "lucide-react";
+import { Camera as CameraIcon, CheckCircle2, AlertCircle, Play, RefreshCw, Send, ArrowLeft, Eye, EyeOff } from "lucide-react";
 import { calculateAngle, areLandmarksVisible } from "../utils/biomechanics";
 import EmojiPainScale from "../components/nurse/EmojiPainScale";
 
@@ -33,10 +33,12 @@ const NurseDashboard: React.FC<NurseDashboardProps> = ({ onSessionComplete, onBa
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const countdownAudioRef = useRef<HTMLAudioElement | null>(null);
+  const introAudioRef = useRef<HTMLAudioElement | null>(null);
 
   const [isStarted, setIsStarted] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [isCountdownAudioPlaying, setIsCountdownAudioPlaying] = useState(false);
+  const [isIntroAudioPlaying, setIsIntroAudioPlaying] = useState(false);
   const [reps, setReps] = useState(0);
   const [maxAngle, setMaxAngle] = useState(0);
   const [isPoseAligned, setIsPoseAligned] = useState(false);
@@ -45,16 +47,22 @@ const NurseDashboard: React.FC<NurseDashboardProps> = ({ onSessionComplete, onBa
   const [isCounterActive, setIsCounterActive] = useState(false);
   const [lastAngle, setLastAngle] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isPrivacyMode, setIsPrivacyMode] = useState(true);
 
   // Refs for tracking mutable state inside MediaPipe callbacks without causing stale closures
   const repsRef = useRef(0);
   const maxAngleRef = useRef(0);
   const repStateRef = useRef<'RELAXED' | 'EXTENDED'>('RELAXED');
   const isCounterActiveRef = useRef(false);
+  const isPrivacyModeRef = useRef(true);
 
   useEffect(() => {
     isCounterActiveRef.current = isCounterActive;
   }, [isCounterActive]);
+
+  useEffect(() => {
+    isPrivacyModeRef.current = isPrivacyMode;
+  }, [isPrivacyMode]);
 
   // MediaPipe Initialization
   useEffect(() => {
@@ -93,9 +101,42 @@ const NurseDashboard: React.FC<NurseDashboardProps> = ({ onSessionComplete, onBa
 
         // Ensure we have landmarks
         if (results.poseLandmarks) {
-          // Draw skeleton
-          drawConnectors(canvasCtx, results.poseLandmarks, POSE_CONNECTIONS, { color: '#10b981', lineWidth: 4 });
-          drawLandmarks(canvasCtx, results.poseLandmarks, { color: '#ffffff', lineWidth: 2, radius: 4 });
+          
+          // --- PRIVACY MODE: Blur the face ---
+          if (isPrivacyModeRef.current) {
+            // MediaPipe Facial Landmarks are typically indices 0 through 10
+            const faceLandmarks = results.poseLandmarks.slice(0, 11);
+            
+            if (faceLandmarks.length > 0 && faceLandmarks[0].visibility > 0.5) {
+              // Find the bounding box of the face
+              const xs = faceLandmarks.map((lm: any) => lm.x * canvasRef.current!.width);
+              const ys = faceLandmarks.map((lm: any) => lm.y * canvasRef.current!.height);
+              
+              const minX = Math.min(...xs);
+              const maxX = Math.max(...xs);
+              const minY = Math.min(...ys);
+              const maxY = Math.max(...ys);
+              
+              const centerX = (minX + maxX) / 2;
+              const centerY = (minY + maxY) / 2;
+              
+              // Calculate radius based on face width/height, add padding
+              const radius = Math.max((maxX - minX), (maxY - minY)) * 1.2;
+              
+              canvasCtx.save();
+              canvasCtx.beginPath();
+              canvasCtx.arc(centerX, centerY, Math.max(radius, 40), 0, 2 * Math.PI);
+              canvasCtx.fillStyle = 'rgba(15, 23, 42, 0.95)'; // Dark slate blur color
+              canvasCtx.shadowColor = 'rgba(15, 23, 42, 1)';
+              canvasCtx.shadowBlur = 20;
+              canvasCtx.fill();
+              canvasCtx.restore();
+            }
+          }
+
+          // Draw skeleton with thicker, more visible lines
+          drawConnectors(canvasCtx, results.poseLandmarks, POSE_CONNECTIONS, { color: '#10b981', lineWidth: 8 });
+          drawLandmarks(canvasCtx, results.poseLandmarks, { color: '#ffffff', lineWidth: 4, radius: 8 });
 
           // Extract Left Arm Joints (11: Shoulder, 13: Elbow, 15: Wrist)
           // For a lateral raise, we typically measure the angle between Hip(23), Shoulder(11), and Elbow(13)
@@ -162,7 +203,49 @@ const NurseDashboard: React.FC<NurseDashboardProps> = ({ onSessionComplete, onBa
     };
   }, []);
 
+  // Intro Audio (Salam)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const audio = new Audio('/audio/salam.mp3');
+    introAudioRef.current = audio;
+    setIsIntroAudioPlaying(true);
+
+    audio.onended = () => {
+      setIsIntroAudioPlaying(false);
+      introAudioRef.current = null;
+    };
+    audio.onerror = () => {
+      setIsIntroAudioPlaying(false);
+      introAudioRef.current = null;
+    };
+
+    // Browsers may block autoplay if not interacted with, but since this is 
+    // mounted after a button click in App.tsx, it typically works.
+    void audio.play().catch(() => {
+      setIsIntroAudioPlaying(false);
+      introAudioRef.current = null;
+    });
+
+    return () => {
+      if (introAudioRef.current) {
+        introAudioRef.current.pause();
+        introAudioRef.current = null;
+      }
+    };
+  }, []);
+
+  const stopIntroAudio = () => {
+    if (introAudioRef.current) {
+      introAudioRef.current.pause();
+      introAudioRef.current.currentTime = 0;
+      introAudioRef.current = null;
+    }
+    setIsIntroAudioPlaying(false);
+  };
+
   const startWorkout = () => {
+    stopIntroAudio();
     if (!isPoseAligned) return;
     setIsStarted(true);
     setIsCounterActive(false);
@@ -287,10 +370,20 @@ const NurseDashboard: React.FC<NurseDashboardProps> = ({ onSessionComplete, onBa
           </div>
         </div>
 
-        <div className={`px-4 py-2 rounded-full flex items-center gap-2 text-sm font-bold shadow-sm transition-colors duration-300 ${isPoseAligned ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
-          }`}>
-          {isPoseAligned ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
-          <span>{isPoseAligned ? 'Sujet Aligné' : 'Recherche du Sujet...'}</span>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setIsPrivacyMode(!isPrivacyMode)}
+            className={`px-4 py-2 rounded-full flex items-center gap-2 text-sm font-bold shadow-sm transition-colors duration-300 ${isPrivacyMode ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+          >
+            {isPrivacyMode ? <EyeOff size={18} /> : <Eye size={18} />}
+            <span>{isPrivacyMode ? 'Anonymat Activé' : 'Mode Privé'}</span>
+          </button>
+
+          <div className={`px-4 py-2 rounded-full flex items-center gap-2 text-sm font-bold shadow-sm transition-colors duration-300 ${isPoseAligned ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+            }`}>
+            {isPoseAligned ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
+            <span>{isPoseAligned ? 'Sujet Aligné' : 'Recherche du Sujet...'}</span>
+          </div>
         </div>
       </header>
 
@@ -332,7 +425,18 @@ const NurseDashboard: React.FC<NurseDashboardProps> = ({ onSessionComplete, onBa
                   <CameraIcon className="text-white" size={32} />
                 </div>
                 <h2 className="font-outfit text-2xl font-bold text-white mb-2">Positionner le Patient</h2>
-                <p className="text-slate-300 mb-8 font-medium">Placez la tablette à 2 mètres environ.</p>
+                <p className="text-slate-300 mb-6 font-medium">Placez la tablette à 2 mètres environ.</p>
+                
+                {isIntroAudioPlaying && (
+                  <div className="flex items-center justify-center gap-2 mb-8 text-emerald-400">
+                    <span className="relative flex h-3 w-3">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                    </span>
+                    <span className="font-medium text-sm animate-pulse">Haraka vous guide...</span>
+                  </div>
+                )}
+                
                 <button
                   onClick={startWorkout}
                   disabled={!isPoseAligned}
