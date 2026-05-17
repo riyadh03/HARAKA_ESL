@@ -29,6 +29,57 @@ const speak = (text: string) => {
   }
 };
 
+const translations: Record<string, Record<string, string>> = {
+  en: {
+    patient: "Patient",
+    sessionTitle: "Rehabilitation Session Assisted by Edge-AI",
+    aligned: "Subject Aligned",
+    searching: "Searching for Subject...",
+    positionPatient: "Position the Patient",
+    placeTablet: "Place the tablet about 2 meters away.",
+    startSession: "Start Session",
+    repetitions: "Repetitions",
+    maxAngle: "Max Angle",
+    currentAngle: "Current Angle",
+    checkInAssignment: "Patient Check-In Assignment",
+    selectExercise: "Please select the exercise assigned to you:",
+    lumbarExtension: "Exercise 1: Lumbar Extension",
+    armRaise: "Exercise 2: Arm Raise",
+    startCalibration: "Start Calibration",
+    startExercise: "Start Exercise",
+    waitingToStart: "Waiting to start...",
+    painAssessment: "Pain Assessment",
+    submitReport: "Submit Report",
+    submitting: "Submitting...",
+    reset: "Reset",
+    finishExercise: "Finish Exercise",
+  },
+  ar: {
+    patient: "المريض",
+    sessionTitle: "جلسة إعادة التأهيل بمساعدة Edge-AI",
+    aligned: "الموضوع متطابق",
+    searching: "جارٍ البحث عن الموضوع...",
+    positionPatient: "ضع المريض في الموضع",
+    placeTablet: "ضع الجهاز اللوحي على بعد حوالي مترين.",
+    startSession: "ابدأ الجلسة",
+    repetitions: "التكرارات",
+    maxAngle: "أقصى زاوية",
+    currentAngle: "الزاوية الحالية",
+    checkInAssignment: "مهمة تسجيل دخول المريض",
+    selectExercise: "يرجى اختيار التمرين المخصص لك:",
+    lumbarExtension: "التمرين 1: تمديد أسفل الظهر",
+    armRaise: "التمرين 2: رفع الذراع",
+    startCalibration: "ابدأ المعايرة",
+    startExercise: "ابدأ التمرين",
+    waitingToStart: "في انتظار البدء...",
+    painAssessment: "تقييم الألم",
+    submitReport: "إرسال التقرير",
+    submitting: "جارٍ الإرسال...",
+    reset: "إعادة تعيين",
+    finishExercise: "إنهاء التمرين",
+  },
+};
+
 const NurseDashboard: React.FC<NurseDashboardProps> = ({ onSessionComplete, onBack }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -45,6 +96,7 @@ const NurseDashboard: React.FC<NurseDashboardProps> = ({ onSessionComplete, onBa
   const [isCalibrating, setIsCalibrating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [score, setScore] = useState(0); // New state for the score
+  const [language, setLanguage] = useState("en"); // Default language is English
 
   // Refs for tracking mutable state inside MediaPipe callbacks without causing stale closures
   const repsRef = useRef(0);
@@ -246,6 +298,8 @@ const NurseDashboard: React.FC<NurseDashboardProps> = ({ onSessionComplete, onBa
     }
   }, [reps, lastAngle]);
 
+  const t = translations[language];
+
   return (
     <div className="min-h-screen bg-slate-50 p-4 md:p-6 lg:p-8 flex flex-col font-inter">
       {/* Hidden video element for MediaPipe processing */}
@@ -259,15 +313,23 @@ const NurseDashboard: React.FC<NurseDashboardProps> = ({ onSessionComplete, onBa
             </button>
           )}
           <div>
-            <h1 className="font-outfit text-2xl md:text-3xl font-bold text-slate-900">Patient: AL-1956</h1>
-            <p className="text-slate-500 font-medium">Session de rééducation assistée par Edge-AI</p>
+            <h1 className="font-outfit text-2xl md:text-3xl font-bold text-slate-900">{t.patient}: AL-1956</h1>
+            <p className="text-slate-500 font-medium">{t.sessionTitle}</p>
           </div>
         </div>
 
-        <div className={`px-4 py-2 rounded-full flex items-center gap-2 text-sm font-bold shadow-sm transition-colors duration-300 ${isPoseAligned ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
-          }`}>
+        <div className={`px-4 py-2 rounded-full flex items-center gap-2 text-sm font-bold shadow-sm transition-colors duration-300 ${isPoseAligned ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
           {isPoseAligned ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
-          <span>{isPoseAligned ? 'Sujet Aligné' : 'Recherche du Sujet...'}</span>
+          <span>{isPoseAligned ? t.aligned : t.searching}</span>
+        </div>
+
+        <div className="ml-4">
+          <button
+            onClick={() => setLanguage(language === "en" ? "ar" : "en")}
+            className="px-4 py-2 bg-white rounded-full shadow-sm hover:scale-105 transition-transform"
+          >
+            {language === "en" ? "العربية" : "English"}
+          </button>
         </div>
       </header>
 
@@ -287,7 +349,7 @@ const NurseDashboard: React.FC<NurseDashboardProps> = ({ onSessionComplete, onBa
                 <div className="text-center">
                   <span className="font-outfit text-8xl md:text-9xl font-black text-white drop-shadow-2xl">{reps}</span>
                   <p className="text-2xl font-bold text-white mt-4 tracking-widest uppercase font-outfit drop-shadow-lg">
-                    Répétitions
+                    {t.repetitions}
                   </p>
                 </div>
               </motion.div>
@@ -300,16 +362,15 @@ const NurseDashboard: React.FC<NurseDashboardProps> = ({ onSessionComplete, onBa
                 <div className="bg-emerald-500 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg shadow-emerald-500/30">
                   <CameraIcon className="text-white" size={32} />
                 </div>
-                <h2 className="font-outfit text-2xl font-bold text-white mb-2">Positionner le Patient</h2>
-                <p className="text-slate-300 mb-8 font-medium">Placez la tablette à 2 mètres environ.</p>
+                <h2 className="font-outfit text-2xl font-bold text-white mb-2">{t.positionPatient}</h2>
+                <p className="text-slate-300 mb-8 font-medium">{t.placeTablet}</p>
                 <button
                   onClick={startWorkout}
                   disabled={!isPoseAligned}
-                  className={`px-8 py-4 rounded-full font-bold text-lg flex items-center justify-center gap-3 mx-auto transition-all ${isPoseAligned ? 'bg-white text-emerald-600 shadow-xl hover:scale-105 active:scale-95' : 'bg-slate-700 text-slate-400 cursor-not-allowed opacity-50'
-                    }`}
+                  className={`px-8 py-4 rounded-full font-bold text-lg flex items-center justify-center gap-3 mx-auto transition-all ${isPoseAligned ? 'bg-white text-emerald-600 shadow-xl hover:scale-105 active:scale-95' : 'bg-slate-700 text-slate-400 cursor-not-allowed opacity-50'}`}
                 >
                   <Play fill="currentColor" size={20} />
-                  Démarrer la Session
+                  {t.startSession}
                 </button>
               </div>
             </div>
@@ -318,7 +379,7 @@ const NurseDashboard: React.FC<NurseDashboardProps> = ({ onSessionComplete, onBa
 
         <div className="lg:col-span-1 flex flex-col gap-6">
           <div className="bg-white rounded-[2.5rem] p-8 border border-slate-200 shadow-sm flex flex-col items-center justify-center flex-1">
-            <span className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4">Répétitions</span>
+            <span className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4">{t.repetitions}</span>
             <motion.span
               key={reps}
               initial={{ scale: 0.8, opacity: 0 }}
@@ -331,30 +392,30 @@ const NurseDashboard: React.FC<NurseDashboardProps> = ({ onSessionComplete, onBa
 
           <div className="bg-white rounded-[2.5rem] p-8 border border-slate-200 shadow-sm grid grid-cols-2 gap-4">
             <div className="text-center">
-              <span className="text-sm font-bold text-slate-400 uppercase tracking-widest block mb-2">Max</span>
-              <span className="font-outfit font-bold text-4xl text-slate-800 tabular-nums">{0}°</span>
+              <span className="text-sm font-bold text-slate-400 uppercase tracking-widest block mb-2">{t.maxAngle}</span>
+              <span className="font-outfit font-bold text-4xl text-slate-800 tabular-nums">{lastAngle}°</span>
             </div>
             <div className="text-center border-l border-slate-100">
-              <span className="text-sm font-bold text-slate-400 uppercase tracking-widest block mb-2">Actuel</span>
+              <span className="text-sm font-bold text-slate-400 uppercase tracking-widest block mb-2">{t.currentAngle}</span>
               <span className="font-outfit font-bold text-4xl text-slate-800 tabular-nums">{lastAngle}°</span>
             </div>
           </div>
 
           <div className="bg-white rounded-[2.5rem] p-6 border border-slate-200 shadow-sm flex flex-col gap-4">
-            <h3 className="font-outfit text-lg font-bold text-slate-900 mb-4">Patient Check-In Assignment</h3>
-            <p className="text-slate-600 mb-4">Please select the exercise assigned to you:</p>
+            <h3 className="font-outfit text-lg font-bold text-slate-900 mb-4">{t.checkInAssignment}</h3>
+            <p className="text-slate-600 mb-4">{t.selectExercise}</p>
             <div className="flex gap-4">
               <button
                 onClick={() => handleExerciseSelect("Lumbar Extension")}
                 className={`px-4 py-2 rounded-lg font-bold ${selectedExercise === "Lumbar Extension" ? "bg-emerald-600 text-white" : "bg-slate-200 text-slate-700"}`}
               >
-                Exercise 1: Lumbar Extension
+                {t.lumbarExtension}
               </button>
               <button
                 onClick={() => handleExerciseSelect("Arm Raise")}
                 className={`px-4 py-2 rounded-lg font-bold ${selectedExercise === "Arm Raise" ? "bg-emerald-600 text-white" : "bg-slate-200 text-slate-700"}`}
               >
-                Exercise 2: Arm Raise
+                {t.armRaise}
               </button>
             </div>
           </div>
@@ -362,7 +423,7 @@ const NurseDashboard: React.FC<NurseDashboardProps> = ({ onSessionComplete, onBa
           <div className="bg-white rounded-[2.5rem] p-6 border border-slate-200 shadow-sm flex flex-col gap-4">
             {isPostSession ? (
               <div className="flex flex-col gap-4">
-                <h3 className="font-outfit text-lg font-bold text-slate-900 mb-2">Évaluation de la douleur</h3>
+                <h3 className="font-outfit text-lg font-bold text-slate-900 mb-2">{t.painAssessment}</h3>
                 <EmojiPainScale painScore={painScore} onPainScoreChange={setPainScore} />
                 <button
                   onClick={submitFinalSession}
@@ -370,7 +431,7 @@ const NurseDashboard: React.FC<NurseDashboardProps> = ({ onSessionComplete, onBa
                   className="mt-4 w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-bold py-4 rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2"
                 >
                   <Send size={20} />
-                  {isSubmitting ? "Envoi en cours..." : "Soumettre le Rapport"}
+                  {isSubmitting ? t.submitting : t.submitReport}
                 </button>
               </div>
             ) : isCounterActive ? (
@@ -380,19 +441,19 @@ const NurseDashboard: React.FC<NurseDashboardProps> = ({ onSessionComplete, onBa
                   className="w-full bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold py-4 rounded-2xl shadow-lg shadow-emerald-600/20 transition-all flex items-center justify-center gap-2"
                 >
                   <CheckCircle2 size={20} />
-                  Terminer l'Exercice
+                  {t.finishExercise}
                 </button>
                 <button
                   onClick={() => window.location.reload()}
                   className="w-full py-3 text-slate-500 font-bold flex items-center justify-center gap-2 hover:bg-slate-100 hover:text-slate-700 rounded-2xl transition-colors"
                 >
                   <RefreshCw size={18} />
-                  Réinitialiser
+                  {t.reset}
                 </button>
               </>
             ) : (
               <div className="flex items-center justify-center h-[104px] text-slate-400 font-medium">
-                En attente du démarrage...
+                {t.waitingToStart}
               </div>
             )}
           </div>
@@ -407,7 +468,7 @@ const NurseDashboard: React.FC<NurseDashboardProps> = ({ onSessionComplete, onBa
                   : "bg-slate-300 text-slate-500 cursor-not-allowed"
               }`}
             >
-              Start Calibration
+              {t.startCalibration}
             </button>
 
             <button
@@ -419,7 +480,7 @@ const NurseDashboard: React.FC<NurseDashboardProps> = ({ onSessionComplete, onBa
                   : "bg-slate-300 text-slate-500 cursor-not-allowed"
               }`}
             >
-              Start Exercise
+              {t.startExercise}
             </button>
           </div>
         </div>
