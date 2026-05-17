@@ -13,19 +13,7 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
     restart: unless-stopped
 
-  node-backend:
-    build:
-      context: ./node_backend
-      dockerfile: Dockerfile
-    ports:
-      - "4000:4000"
-    volumes:
-      - ./node_backend:/app
-      - /app/node_modules
-    environment:
-      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
-      - PORT=4000
-    restart: unless-stopped
+
 
   frontend-ui:
     build:

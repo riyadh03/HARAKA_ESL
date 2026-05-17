@@ -1,42 +1,57 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Activity, Stethoscope } from 'lucide-react'
+import { Activity, Stethoscope, Volume2, VolumeX } from 'lucide-react'
 import NurseDashboard from './views/NurseDashboard'
 import DoctorDashboardView from './views/DoctorDashboardView'
+import ReportView from './views/ReportView'
 
-type ViewMode = 'selection' | 'nurse' | 'doctor'
+type ViewMode = 'selection' | 'nurse' | 'doctor' | 'report'
 
 export default function App() {
   const [mode, setMode] = useState<ViewMode>('selection')
-
-  const speak = (text: string) => {
-    if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
-      return
-    }
-
-    window.speechSynthesis.cancel()
-    const utterance = new SpeechSynthesisUtterance(text)
-    utterance.lang = 'ar-MA'
-    utterance.rate = 0.95
-    utterance.pitch = 1
-    window.speechSynthesis.speak(utterance)
-  }
+  const [completedSessionData, setCompletedSessionData] = useState<any>(null)
+  const introAudioRef = useRef<HTMLAudioElement | null>(null)
+  const [isIntroAudioPlaying, setIsIntroAudioPlaying] = useState(false)
 
   const openNurseSpace = () => {
-    if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+    if (typeof window === 'undefined') {
       setMode('nurse')
       return
     }
 
-    window.speechSynthesis.cancel()
-    const utterance = new SpeechSynthesisUtterance('salam')
-    utterance.lang = 'ar-MA'
-    utterance.rate = 0.95
-    utterance.pitch = 1
-    utterance.onend = () => setMode('nurse')
-    utterance.onerror = () => setMode('nurse')
-    window.speechSynthesis.speak(utterance)
+    const audio = new Audio('/audio/salam.mp3')
+    introAudioRef.current = audio
+    setIsIntroAudioPlaying(true)
+    audio.onended = () => {
+      introAudioRef.current = null
+      setIsIntroAudioPlaying(false)
+      setMode('nurse')
+    }
+    audio.onerror = () => {
+      introAudioRef.current = null
+      setIsIntroAudioPlaying(false)
+      setMode('nurse')
+    }
+    void audio.play().catch(() => {
+      introAudioRef.current = null
+      setIsIntroAudioPlaying(false)
+      setMode('nurse')
+    })
   }
+
+  const stopIntroAudio = () => {
+    introAudioRef.current?.pause()
+    if (introAudioRef.current) {
+      introAudioRef.current.currentTime = 0
+    }
+    introAudioRef.current = null
+    setIsIntroAudioPlaying(false)
+  }
+
+  const handleSessionComplete = (data: any) => {
+    setCompletedSessionData(data);
+    setMode('report');
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 font-inter text-slate-900">
@@ -108,6 +123,20 @@ export default function App() {
                   </div>
                 </motion.button>
               </div>
+
+              <div className="mt-6 flex justify-center">
+                <button
+                  onClick={isIntroAudioPlaying ? stopIntroAudio : openNurseSpace}
+                  className={`inline-flex items-center gap-2 px-5 py-3 rounded-full font-semibold shadow-sm transition-colors ${
+                    isIntroAudioPlaying
+                      ? 'bg-rose-600 text-white hover:bg-rose-700'
+                      : 'bg-emerald-600 text-white hover:bg-emerald-700'
+                  }`}
+                >
+                  {isIntroAudioPlaying ? <VolumeX size={18} /> : <Volume2 size={18} />}
+                  {isIntroAudioPlaying ? 'Stop Salam Audio' : 'Play Salam Audio'}
+                </button>
+              </div>
             </div>
           </motion.div>
         )}
@@ -120,7 +149,19 @@ export default function App() {
             exit={{ opacity: 0, scale: 0.98 }}
             className="min-h-screen bg-slate-50"
           >
-            <NurseDashboard onSessionComplete={(data) => console.log('Session:', data)} onBack={() => setMode('selection')} />
+            <NurseDashboard onSessionComplete={handleSessionComplete} onBack={() => setMode('selection')} />
+          </motion.div>
+        )}
+
+        {mode === 'report' && completedSessionData && (
+          <motion.div
+            key="report"
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.98 }}
+            className="min-h-screen bg-slate-50"
+          >
+            <ReportView data={completedSessionData} onClose={() => setMode('selection')} />
           </motion.div>
         )}
 

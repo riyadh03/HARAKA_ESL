@@ -71,7 +71,8 @@ class SessionSubmitRequest(BaseModel):
 @router.post("/submit")
 async def submit_session(
     request_data: SessionSubmitRequest,
-    request: Request
+    request: Request,
+    verifier: AmberFlagVerifier = Depends()
 ) -> Dict[str, Any]:
     """
     Submit session data from frontend Edge AI.
@@ -79,29 +80,32 @@ async def submit_session(
     Process:
     1. Validate session data with Pydantic
     2. Store session in database (or file for MVP)
-    3. Trigger LLM report generation
-    4. Return session ID and initial status
-    
-    Args:
-        request: Session data from frontend
-        llm_service: Injected LLM service for report generation
-    
-    Returns:
-        dict: Session confirmation and report generation status
+    3. Trigger LLM report generation via OpenRouter
+    4. Run Amber Flag verification
+    5. Return the full report to the UI
     """
     try:
-        # TODO: Store session data in database
-        # For MVP: Save to JSON file
+        # TODO: Store session data in database for MVP
         
-        # TODO: Trigger async LLM report generation
-        # llm_service = request.app.state.llm_service
-        # report = await llm_service.generate_clinical_report(request_data.dict())
+        # Trigger async LLM report generation
+        llm_service = request.app.state.llm_service
+        session_data_dict = request_data.dict()
+        
+        report_data = await llm_service.generate_clinical_report(session_data_dict)
+        raw_report = report_data.get("raw_report", "")
+        
+        # Verify report with amber flag checker
+        amber_flags, is_verified, flagged_report_text = verifier.verify_report(raw_report, session_data_dict)
         
         return {
             "status": "success",
             "session_id": request_data.session_id,
             "message": "Session data received successfully",
-            "report_status": "generating"
+            "report": flagged_report_text,
+            "raw_report": raw_report,
+            "model_used": report_data.get("model_used", "unknown"),
+            "amber_flags": [flag.dict() for flag in amber_flags],
+            "verification_status": "verified" if is_verified else "needs_review"
         }
         
     except Exception as e:
