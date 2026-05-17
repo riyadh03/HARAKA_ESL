@@ -2,9 +2,17 @@ import React, { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Camera as CameraIcon, CheckCircle2, AlertCircle, Play, RefreshCw, Send, ArrowLeft } from "lucide-react";
 import { calculateAngle, areLandmarksVisible } from "../utils/biomechanics";
-import { Pose, POSE_CONNECTIONS } from "@mediapipe/pose";
-import { Camera } from "@mediapipe/camera_utils";
-import { drawConnectors, drawLandmarks } from "@mediapipe/drawing_utils";
+
+// Use global window objects loaded via CDN in index.html
+declare global {
+  interface Window {
+    Pose: any;
+    Camera: any;
+    drawConnectors: any;
+    drawLandmarks: any;
+    POSE_CONNECTIONS: any;
+  }
+}
 
 interface NurseDashboardProps {
   onSessionComplete: (data: any) => void;
@@ -37,14 +45,16 @@ const NurseDashboard: React.FC<NurseDashboardProps> = ({ onSessionComplete, onBa
 
   // MediaPipe Initialization
   useEffect(() => {
-    let camera: Camera | null = null;
-    let pose: Pose | null = null;
+    let camera: any = null;
+    let pose: any = null;
 
     const initializeMediaPipe = () => {
-      if (!videoRef.current || !canvasRef.current) return;
+      if (!videoRef.current || !canvasRef.current || !window.Pose) return;
+
+      const { Pose, Camera, drawConnectors, drawLandmarks, POSE_CONNECTIONS } = window;
 
       pose = new Pose({
-        locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`,
+        locateFile: (file: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`,
       });
 
       pose.setOptions({
@@ -56,7 +66,7 @@ const NurseDashboard: React.FC<NurseDashboardProps> = ({ onSessionComplete, onBa
         minTrackingConfidence: 0.5,
       });
 
-      pose.onResults((results) => {
+      pose.onResults((results: any) => {
         const canvasCtx = canvasRef.current?.getContext('2d');
         if (!canvasCtx || !canvasRef.current) return;
 
