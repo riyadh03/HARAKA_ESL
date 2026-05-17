@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Camera as CameraIcon, CheckCircle2, AlertCircle, Play, RefreshCw, Send, ArrowLeft } from "lucide-react";
+import EmojiPainScale from "../components/nurse/EmojiPainScale";
 
 interface NurseDashboardProps {
   onSessionComplete: (data: any) => void;
@@ -14,6 +15,8 @@ const NurseDashboard: React.FC<NurseDashboardProps> = ({ onSessionComplete, onBa
   const [reps, setReps] = useState(0);
   const [maxAngle, setMaxAngle] = useState(0);
   const [isPoseAligned] = useState(true);
+  const [isPostSession, setIsPostSession] = useState(false);
+  const [painScore, setPainScore] = useState(2);
   const [isCounterActive, setIsCounterActive] = useState(false);
   const [lastAngle, setLastAngle] = useState(0);
 
@@ -86,6 +89,8 @@ const NurseDashboard: React.FC<NurseDashboardProps> = ({ onSessionComplete, onBa
 
   const stopWorkout = async () => {
     setIsCounterActive(false);
+    setIsPostSession(true);
+    speak('Kidayr m3a lewja3 daba ?');
     
     const sessionData = {
       exerciseName: "Élévation Latérale du Bras",
@@ -231,7 +236,12 @@ const NurseDashboard: React.FC<NurseDashboardProps> = ({ onSessionComplete, onBa
 
           {/* Controls */}
           <div className="bg-white rounded-[2.5rem] p-6 border border-slate-200 shadow-sm flex flex-col gap-4">
-            {isCounterActive ? (
+            {isPostSession ? (
+              <div>
+                <h3 className="font-outfit text-lg font-bold text-slate-900 mb-4">Pain Assessment</h3>
+                <EmojiPainScale painScore={painScore} onPainScoreChange={setPainScore} />
+              </div>
+            ) : isCounterActive ? (
               <>
                 <button
                   onClick={stopWorkout}
