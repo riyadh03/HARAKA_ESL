@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Volume2, Mic, Eye, EyeOff } from 'lucide-react'
+import { Volume2 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import HardwareHealthBadge from '../components/nurse/HardwareHealthBadge'
 import CameraFeed from '../components/nurse/CameraFeed'
@@ -18,7 +18,6 @@ export default function NurseTabletView() {
   const [jointAngle, setJointAngle] = useState(45)
   const [showAlert, setShowAlert] = useState(false)
   const [painScore, setPainScore] = useState(2)
-  const [isRecording, setIsRecording] = useState(false)
 
   const handleSimulateExercise = () => {
     setSessionState('exercise')
@@ -75,9 +74,7 @@ export default function NurseTabletView() {
             jointAngle={jointAngle}
             showAlert={showAlert}
             painScore={painScore}
-            isRecording={isRecording}
             onPainScoreChange={setPainScore}
-            onRecordingToggle={setIsRecording}
             onSimulateExercise={handleSimulateExercise}
             onCompleteSession={handleCompleteSession}
           />
