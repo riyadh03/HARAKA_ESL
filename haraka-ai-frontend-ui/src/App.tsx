@@ -55,7 +55,7 @@ export default function App() {
                   <div className="absolute top-8 left-8 bg-blue-50 text-blue-600 p-4 rounded-3xl shadow-sm group-hover:scale-110 transition-transform duration-300">
                     <Activity size={48} strokeWidth={1.5} />
                   </div>
-                  
+
                   <div className="relative z-10">
                     <h2 className="font-outfit text-3xl font-bold text-slate-900 mb-3 group-hover:text-blue-600 transition-colors">
                       Espace Infirmier
@@ -90,6 +90,7 @@ export default function App() {
                   </div>
                 </motion.button>
               </div>
+
             </div>
           </motion.div>
         )}
