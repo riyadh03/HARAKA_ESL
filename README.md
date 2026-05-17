@@ -91,6 +91,23 @@ haraka_ai_project/
 
 ---
 
+## Progress So Far
+
+The following pieces are already implemented in this workspace:
+
+- Nurse entry audio: clicking the nurse space plays `salam.mp3`, with start/stop controls in the frontend.
+ - Nurse entry audio: clicking the nurse space plays `salam.mp3`, with start/stop controls in the frontend.
+ - Nurse selection UI: removed the redundant "Entrer Espace Infirmier" button; the nurse card click now handles entry and the salam toggle remains on the card.
+- Session countdown audio: starting a session plays `tlatajoujwahed.mp3`, with a stop control during the countdown.
+- Hardware health check: a 5-second OpenCV-based camera check is available in `backend_api/scripts/camera_health_check.py` and exposed through the backend health API.
+- Session packaging: the FastAPI session submit route now saves the final payload as JSON and returns the saved file path.
+- Audio asset handling: the MP3 files were moved into the frontend public audio folder so the app can serve them locally.
+- Type safety: the frontend includes a small MP3 module declaration so the audio imports compile cleanly.
+
+Planned next steps from the project scope are the 30-second calibration baseline, active coaching audio, and the amber-flagged report PDF flow.
+
+---
+
 ## Quick Start — Local Development
 
 The project is fully Dockerized for an easy, consistent development environment.

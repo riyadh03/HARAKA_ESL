@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # OS generated files
 .DS_Store
 .DS_Store?
@@ -74,3 +75,6 @@ htmlcov/
 
 # Docker
 .dockerignore
+=======
+__pycache__/
+>>>>>>> 402971f (Save local changes: update session.py and NurseDashboard; remove tracked pyc)

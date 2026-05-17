@@ -16,6 +16,210 @@ Author: Haraka.ai Team
 from fastapi import APIRouter, Depends, HTTPException, Request
 from typing import Dict, Any
 from pydantic import BaseModel
+import json
+from pathlib import Path
+
+# Import models and services
+from models.session import SessionData, SessionReport
+from services.llm_service import LLMService
+from utils.amber_flag_verifier import AmberFlagVerifier
+
+
+router = APIRouter()
+
+
+class SessionSubmitRequest(BaseModel):
+    """
+    Request model for session submission from frontend.
+
+    Contains:
+    - Exercise analytics (angles, repetitions, warnings)
+    - Pain scale selection (emoji-based)
+    - Session metadata (timestamp, patient ID, exercise type)
+    - Calibration baseline data
+
+    Size: ~5KB (lightweight for low-bandwidth)
+    """
+    session_id: str
+    patient_id: str
+    exercise_type: str
+    timestamp: str
+    exercise_analytics: Dict[str, Any]
+    pain_scale: int
+    calibration_baseline: Dict[str, Any]
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "session_id": "sess_001",
+                "patient_id": "pat_123",
+                "exercise_type": "shoulder_flexion",
+                "timestamp": "2026-05-16T20:00:00Z",
+                "exercise_analytics": {
+                    "max_angle": 145,
+                    "reps": 10,
+                    "warnings": ["trunk_shift"],
+                    "avg_speed": 0.8
+                },
+                "pain_scale": 2,
+                "calibration_baseline": {
+                    "neutral_angle": 90,
+                    "range_of_motion": 60
+                }
+            }
+        }
+
+
+@router.post("/submit")
+async def submit_session(
+    request_data: SessionSubmitRequest,
+    request: Request
+) -> Dict[str, Any]:
+    """
+    Submit session data from frontend Edge AI.
+
+    Saves the packaged payload as JSON for low-bandwidth transfer.
+    """
+    try:
+        sessions_dir = Path("data/sessions")
+        sessions_dir.mkdir(parents=True, exist_ok=True)
+
+        packaged = {
+            "metadata": {
+                "session_id": request_data.session_id,
+                "patient_id": request_data.patient_id,
+                "exercise_type": request_data.exercise_type,
+                "timestamp": request_data.timestamp
+            },
+            "exercise_analytics": request_data.exercise_analytics,
+            "pain_scale": request_data.pain_scale,
+            "calibration_baseline": request_data.calibration_baseline
+        }
+
+        out_path = sessions_dir / f"{request_data.session_id}.json"
+        with open(out_path, "w", encoding="utf-8") as fh:
+            json.dump(packaged, fh, ensure_ascii=False, indent=2)
+
+        return {
+            "status": "success",
+            "session_id": request_data.session_id,
+            "message": "Session data saved",
+            "file": str(out_path)
+        }
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to process session: {str(e)}"
+        )
+
+
+@router.get("/{session_id}")
+async def get_session(session_id: str) -> Dict[str, Any]:
+    """
+    Retrieve session data by ID.
+    """
+    try:
+        sessions_dir = Path("data/sessions")
+        file_path = sessions_dir / f"{session_id}.json"
+        if not file_path.exists():
+            raise HTTPException(status_code=404, detail="Session file not found")
+
+        with open(file_path, "r", encoding="utf-8") as fh:
+            data = json.load(fh)
+
+        return {
+            "session_id": session_id,
+            "status": "found",
+            "data": data
+        }
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Session not found: {str(e)}"
+        )
+
+
+@router.post("/{session_id}/report")
+async def generate_report(
+    session_id: str,
+    request: Request,
+    verifier: AmberFlagVerifier = Depends()
+) -> Dict[str, Any]:
+    """
+    Generate clinical report using LLM with amber flag verification.
+    """
+    try:
+        session_data = {
+            "metadata": {"session_id": session_id},
+            "exercise_analytics": {"max_angle": 145, "reps": 10},
+            "pain_scale": 2
+        }
+
+        llm_service = request.app.state.llm_service
+        report_data = await llm_service.generate_clinical_report(session_data)
+        raw_report = report_data.get("raw_report", "")
+
+        amber_flags, is_verified, flagged_report_text = verifier.verify_report(raw_report, session_data)
+
+        return {
+            "session_id": session_id,
+            "report": {
+                "raw_report": raw_report,
+                "flagged_report_text": flagged_report_text,
+                "model_used": report_data.get("model_used", "unknown")
+            },
+            "amber_flags": [flag.dict() for flag in amber_flags],
+            "verification_status": "verified" if is_verified else "needs_review"
+        }
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to generate report: {str(e)}"
+        )
+
+
+@router.post("/{session_id}/transcribe")
+async def transcribe_pain_description(
+    session_id: str,
+    audio_data: bytes,
+    request: Request
+) -> Dict[str, Any]:
+    """
+    Transcribe patient's Darija pain description using Whisper API.
+    """
+    try:
+        return {
+            "session_id": session_id,
+            "transcription": "",
+            "language": "ar-MA"
+        }
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Transcription failed: {str(e)}"
+        )
+"""
+Session API Routes
+==================
+
+Endpoints for handling rehabilitation session data:
+- POST /api/v1/session/submit - Submit session JSON from frontend
+- GET /api/v1/session/{session_id} - Retrieve session data
+- POST /api/v1/session/{session_id}/report - Generate clinical report
+
+All endpoints receive lightweight JSON payloads (~5KB) to comply with
+low-bandwidth constraints in rural Morocco.
+
+Author: Haraka.ai Team
+"""
+
+from fastapi import APIRouter, Depends, HTTPException, Request
+from typing import Dict, Any
+from pydantic import BaseModel
 
 # Import models and services
 from models.session import SessionData, SessionReport
