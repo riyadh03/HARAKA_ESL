@@ -375,6 +375,44 @@ const NurseDashboard: React.FC<NurseDashboardProps> = ({ onSessionComplete, onBa
               </div>
             </div>
           )}
+
+          <div className="absolute top-4 right-4 z-30">
+            <button
+              onClick={() => {
+                setIsCounterActive(false);
+                setIsStarted(false);
+              }}
+              className="px-4 py-2 bg-red-600 text-white rounded-full shadow-md hover:bg-red-700 transition"
+            >
+              Stop Session
+            </button>
+          </div>
+
+          <div className="absolute bottom-4 left-4 z-30">
+            {!isStarted && (
+              <button
+                onClick={() => {
+                  setIsCalibrating(true);
+                  setIsStarted(true);
+                }}
+                className="px-4 py-2 bg-blue-600 text-white rounded-full shadow-md hover:bg-blue-700 transition"
+              >
+                {t.startCalibration}
+              </button>
+            )}
+
+            {isCalibrating && (
+              <button
+                onClick={() => {
+                  setIsCalibrating(false);
+                  setIsCounterActive(true);
+                }}
+                className="px-4 py-2 bg-green-600 text-white rounded-full shadow-md hover:bg-green-700 transition"
+              >
+                {t.startExercise}
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="lg:col-span-1 flex flex-col gap-6">
