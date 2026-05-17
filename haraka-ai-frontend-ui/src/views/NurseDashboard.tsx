@@ -392,24 +392,16 @@ const NurseDashboard: React.FC<NurseDashboardProps> = ({ onSessionComplete, onBa
             {!isStarted && (
               <button
                 onClick={() => {
-                  setIsCalibrating(true);
                   setIsStarted(true);
+                  speak(t.positionPatient);
+                  setTimeout(() => {
+                    setIsCalibrating(false);
+                    setIsCounterActive(true);
+                  }, 5000); // 5 seconds for calibration
                 }}
                 className="px-4 py-2 bg-blue-600 text-white rounded-full shadow-md hover:bg-blue-700 transition"
               >
-                {t.startCalibration}
-              </button>
-            )}
-
-            {isCalibrating && (
-              <button
-                onClick={() => {
-                  setIsCalibrating(false);
-                  setIsCounterActive(true);
-                }}
-                className="px-4 py-2 bg-green-600 text-white rounded-full shadow-md hover:bg-green-700 transition"
-              >
-                {t.startExercise}
+                {t.startSession}
               </button>
             )}
           </div>
