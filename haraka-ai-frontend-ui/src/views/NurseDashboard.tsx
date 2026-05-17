@@ -14,6 +14,7 @@ declare global {
     POSE_CONNECTIONS: any;
   }
 }
+import { Camera as CameraIcon, CheckCircle2, AlertCircle, Play, RefreshCw, Send, ArrowLeft, Volume2, VolumeX } from "lucide-react";
 
 interface NurseDashboardProps {
   onSessionComplete: (data: any) => void;
@@ -34,9 +35,11 @@ const NurseDashboard: React.FC<NurseDashboardProps> = ({ onSessionComplete, onBa
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const countdownAudioRef = useRef<HTMLAudioElement | null>(null);
 
+  const introAudioRef = useRef<HTMLAudioElement | null>(null);
   const [isStarted, setIsStarted] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [isCountdownAudioPlaying, setIsCountdownAudioPlaying] = useState(false);
+  const [isIntroAudioPlaying, setIsIntroAudioPlaying] = useState(false);
   const [reps, setReps] = useState(0);
   const [maxAngle, setMaxAngle] = useState(0);
   const [isPoseAligned, setIsPoseAligned] = useState(false);
@@ -206,6 +209,65 @@ const NurseDashboard: React.FC<NurseDashboardProps> = ({ onSessionComplete, onBa
     countdownAudioRef.current = null;
     setIsCountdownAudioPlaying(false);
     setCountdown(null);
+    countdownAudioRef.current = null
+    setIsCountdownAudioPlaying(false)
+    setCountdown(null)
+    setIsCounterActive(false)
+    setIsStarted(false)
+  }
+
+  const playSalam = () => {
+    if (typeof window === 'undefined') return
+
+    // If an Audio instance already exists, resume it instead of creating a new one
+    if (introAudioRef.current) {
+      const existing = introAudioRef.current
+      // If already playing, do nothing
+      if (!existing.paused) {
+        setIsIntroAudioPlaying(true)
+        return
+      }
+      existing.play().then(() => setIsIntroAudioPlaying(true)).catch(() => {
+        introAudioRef.current = null
+        setIsIntroAudioPlaying(false)
+      })
+      return
+    }
+
+    const audio = new Audio('/audio/salam.mp3')
+    introAudioRef.current = audio
+    setIsIntroAudioPlaying(true)
+    audio.onended = () => {
+      introAudioRef.current = null
+      setIsIntroAudioPlaying(false)
+    }
+    audio.onerror = () => {
+      introAudioRef.current = null
+      setIsIntroAudioPlaying(false)
+    }
+    void audio.play().catch(() => {
+      introAudioRef.current = null
+      setIsIntroAudioPlaying(false)
+    })
+  }
+
+  const stopIntroAudio = () => {
+    const a = introAudioRef.current
+    if (!a) {
+      setIsIntroAudioPlaying(false)
+      return
+    }
+    try {
+      a.pause()
+      a.currentTime = 0
+    } catch {
+      // ignore
+    }
+    introAudioRef.current = null
+    setIsIntroAudioPlaying(false)
+  }
+
+  const stopWorkout = async () => {
     setIsCounterActive(false);
     setIsStarted(false);
   };
@@ -291,6 +353,16 @@ const NurseDashboard: React.FC<NurseDashboardProps> = ({ onSessionComplete, onBa
           }`}>
           {isPoseAligned ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
           <span>{isPoseAligned ? 'Sujet Aligné' : 'Recherche du Sujet...'}</span>
+        </div>
+        
+        {/* Salam audio toggle */}
+        <div className="ml-4">
+          <button
+            onClick={() => (isIntroAudioPlaying ? stopIntroAudio() : playSalam())}
+            className="p-2 bg-white rounded-full shadow-sm hover:scale-105 transition-transform"
+          >
+            {isIntroAudioPlaying ? <VolumeX size={20} className="text-slate-700" /> : <Volume2 size={20} className="text-slate-700" />}
+          </button>
         </div>
       </header>
 
