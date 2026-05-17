@@ -227,7 +227,19 @@ const NurseDashboard: React.FC<NurseDashboardProps> = ({ onSessionComplete, onBa
   };
 
   const startWorkout = () => {
-    if (!isPoseAligned || !selectedExercise || isCalibrating) return;
+    if (!isPoseAligned) {
+      speak("Please align yourself with the camera.");
+      return;
+    }
+    if (!selectedExercise) {
+      speak("Please select an exercise to begin.");
+      return;
+    }
+    if (isCalibrating) {
+      speak("Calibration is still in progress. Please wait.");
+      return;
+    }
+
     setIsStarted(true);
     setIsCounterActive(false);
   };
@@ -390,7 +402,8 @@ const NurseDashboard: React.FC<NurseDashboardProps> = ({ onSessionComplete, onBa
 
           <div className="absolute bottom-4 left-4 z-30">
             {!isStarted && (
-              <button
+              <div
+                className="px-4 py-2 bg-blue-600 text-white rounded-full shadow-md hover:bg-blue-700 transition cursor-pointer"
                 onClick={() => {
                   setIsStarted(true);
                   speak(t.positionPatient);
@@ -399,10 +412,9 @@ const NurseDashboard: React.FC<NurseDashboardProps> = ({ onSessionComplete, onBa
                     setIsCounterActive(true);
                   }, 5000); // 5 seconds for calibration
                 }}
-                className="px-4 py-2 bg-blue-600 text-white rounded-full shadow-md hover:bg-blue-700 transition"
               >
                 {t.startSession}
-              </button>
+              </div>
             )}
           </div>
         </div>
