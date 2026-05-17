@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Camera as CameraIcon, CheckCircle2, AlertCircle, Play, RefreshCw, Send, ArrowLeft } from "lucide-react";
+import { Camera as CameraIcon, CheckCircle2, AlertCircle, Play, RefreshCw, Send, ArrowLeft, Volume2, VolumeX } from "lucide-react";
 import { calculateAngle, areLandmarksVisible } from "../utils/biomechanics";
 import EmojiPainScale from "../components/nurse/EmojiPainScale";
 
