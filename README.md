@@ -74,7 +74,6 @@ haraka_ai_project/
 1. Edge-AI Computer Vision (MediaPipe)
 - The React frontend runs Google MediaPipe Pose entirely in the browser. Biomechanical math computes the arm angle and automatically counts repetitions using a custom state machine. No video is ever sent to the cloud, ensuring 100% CNDP privacy compliance.
 
-<<<<<<< HEAD
 2. Dual-Signal Pain Processing
 - A 5-emoji Wong–Baker style scale provides a low-literacy quantitative pain measure. After the session ends, patients select the emoji directly (no microphone button).
 - End-of-session prompt: "Kidayr m3a lewja3 daba ?" is played to guide the selection.
